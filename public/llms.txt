@@ -1,0 +1,45 @@
+# CM de Poche
+
+> Ton contenu. Ton style. Autopilot.
+
+CM de Poche est une application SaaS mobile-first qui aide les micro-influenceurs et créateurs de contenu francophones à automatiser leur présence sur Instagram et TikTok.
+
+## Ce que fait CM de Poche
+
+- Génération automatique de posts par IA (légendes, hashtags, formats optimaux)
+- Calendrier éditorial saisonnier (maronnier français : Noël, Saint-Valentin, Rentrée, etc.)
+- Programmation de publications Instagram/TikTok
+- Analyse de profil Instagram (engagement, meilleurs horaires, audience)
+- Import et gestion de visuels (photos, vidéos)
+- Système de crédits avec 3 formules (Free, Pro, Business)
+
+## Public cible
+
+- Micro-influenceurs (1K-100K abonnés)
+- Créateurs de contenu francophones
+- Petites marques et entrepreneurs solo
+- Community managers indépendants
+
+## Tarifs
+
+- **Free** : 0€/mois — 10 crédits, watermark, support communauté
+- **Pro** : 29€/mois — 100 crédits, sans watermark, 1 analyse profil/mois, calendrier éditorial, support email
+- **Business** : 49€/mois — 350 crédits, sans watermark, analyses illimitées, calendrier éditorial, support prioritaire
+
+## Stack technique
+
+- Next.js 14 (App Router)
+- Supabase (Auth, Database, Storage)
+- Tailwind CSS
+- Claude AI (génération de contenu)
+- Instagram Graph API
+
+## Liens
+
+- Site : https://cmdepoche.com
+- Landing : https://cmdepoche.com/landing
+- Contact : groupe.cogitium@gmail.com
+
+## llms-full.txt
+
+Pour plus de détails techniques, voir [llms-full.txt](llms-full.txt)

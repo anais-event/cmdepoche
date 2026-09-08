@@ -1,0 +1,91 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: #FAF8F5;
+    color: #2D2A26;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Cinzel', serif;
+  }
+
+  /* Empêche le zoom auto sur focus mobile (font-size >= 16px) */
+  input, textarea, select {
+    font-size: 16px;
+  }
+}
+
+@layer components {
+  /* Conteneur mobile-first */
+  .container-mobile {
+    @apply max-w-mobile mx-auto w-full px-4;
+  }
+
+  /* Bouton CTA principal — pill terracotta */
+  .btn-primary {
+    @apply w-full py-4 rounded-pill bg-terra text-white font-semibold text-base
+           active:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed;
+    min-height: 48px;
+  }
+
+  /* Bouton secondaire — outline */
+  .btn-secondary {
+    @apply w-full py-4 rounded-pill border border-border text-text font-medium text-base
+           active:bg-border-l transition-colors;
+    min-height: 48px;
+  }
+
+  /* Bouton tertiaire — sage */
+  .btn-sage {
+    @apply w-full py-4 rounded-pill bg-sage text-white font-semibold text-base
+           active:opacity-90 transition-opacity;
+    min-height: 48px;
+  }
+
+  /* Card standard */
+  .card {
+    @apply bg-card rounded-card border border-border p-4;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+
+  /* Input standard */
+  .input {
+    @apply w-full px-4 py-3 rounded-input border border-border bg-card text-text
+           placeholder:text-muted focus:outline-none focus:border-terra transition-colors;
+    min-height: 48px;
+  }
+
+  /* Pill / tag sélectionnable */
+  .pill {
+    @apply px-4 py-2 rounded-pill border border-border text-sub text-sm font-medium
+           active:opacity-80 transition-all;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .pill-active {
+    @apply bg-terra text-white border-terra;
+  }
+
+  /* Zone tactile minimum 44x44 */
+  .touch-target {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}

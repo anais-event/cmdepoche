@@ -1,0 +1,17 @@
+{
+  "schema_version": "v1",
+  "name_for_human": "CM de Poche",
+  "name_for_model": "cm_de_poche",
+  "description_for_human": "Automatise ta création de contenu Instagram et TikTok avec l'IA. Pour micro-influenceurs et créateurs francophones.",
+  "description_for_model": "CM de Poche is a French-language SaaS for micro-influencers that automates Instagram and TikTok content creation using AI. It generates captions, hashtags, optimal posting times, and leverages a French seasonal editorial calendar (maronnier). Three pricing tiers: Free (0€, 10 credits), Pro (29€/month, 100 credits), Business (49€/month, 350 credits). Built with Next.js 14, Supabase, and Claude AI.",
+  "auth": {
+    "type": "none"
+  },
+  "api": {
+    "type": "openapi",
+    "url": "https://cmdepoche.com/openapi.yaml"
+  },
+  "logo_url": "https://cmdepoche.com/icon.png",
+  "contact_email": "groupe.cogitium@gmail.com",
+  "legal_info_url": "https://cmdepoche.com/landing#privacy"
+}

@@ -1,0 +1,22 @@
+User-agent: *
+Allow: /
+Allow: /landing
+Allow: /llms.txt
+Allow: /llms-full.txt
+Sitemap: https://cmdepoche.com/sitemap.xml
+
+User-agent: GPTBot
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+
+User-agent: Claude-Web
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /

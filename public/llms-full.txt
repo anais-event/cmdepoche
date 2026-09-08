@@ -1,0 +1,85 @@
+# CM de Poche — Documentation complète pour LLMs
+
+> Ton contenu. Ton style. Autopilot.
+
+## Présentation
+
+CM de Poche est une application SaaS mobile-first conçue pour les micro-influenceurs et créateurs de contenu francophones. Elle automatise la création, l'optimisation et la programmation de contenu pour Instagram et TikTok grâce à l'intelligence artificielle.
+
+## Fonctionnalités détaillées
+
+### 1. Onboarding intelligent
+L'utilisateur renseigne son identité de marque (nom, description, handle Instagram), choisit son ton de voix (Inspirant, Éducatif, Humoristique, Authentique, Motivant, Poétique), ses niches (Lifestyle, Mode, Food, Voyage, Beauté, Sport, Tech, Business, Art, Musique, Santé, Éducation), et sa fréquence de publication.
+
+### 2. Import de visuels
+Upload direct de photos et vidéos (JPG, PNG, WebP, GIF, MP4) vers Supabase Storage. Interface drag & drop avec sélection multiple, grille de prévisualisation, et suppression individuelle.
+
+### 3. Génération IA de contenu
+L'IA analyse le profil du créateur, la saison en cours et les événements à venir (maronnier éditorial français complet sur 12 mois) pour générer des posts optimisés comprenant :
+- Légendes authentiques et engageantes en français
+- Hashtags stratégiques (mix gros/moyens/niche)
+- Format optimal (Photo, Carousel, Reel)
+- Horaire de publication optimisé
+- Score de performance estimé
+
+### 4. Calendrier éditorial saisonnier (Maronnier)
+Calendrier complet des événements français intégré :
+- Janvier : Nouvel An, Blue Monday, Dry January
+- Février : Saint-Valentin, Chandeleur
+- Mars : Journée des droits des femmes, Printemps
+- Avril : Pâques, Journée de la Terre
+- Mai : Fête du Travail, Fête des Mères
+- Juin : Été, Fête de la Musique, Fête des Pères
+- Juillet : Vacances d'été, 14 Juillet
+- Août : Assomption
+- Septembre : Rentrée, Automne
+- Octobre : Octobre Rose, Halloween
+- Novembre : Black Friday, Movember
+- Décembre : Noël, Calendrier de l'Avent, Réveillon
+
+### 5. Programmation
+Validation individuelle des posts (approuver/refuser/modifier), puis programmation en lot avec déduction automatique des crédits.
+
+### 6. Analyse de profil Instagram
+Disponible pour les plans Pro et Business. Analyse : taux d'engagement, meilleurs formats, horaires optimaux, démographie audience, centres d'intérêt, palette de couleurs, ton détecté.
+
+### 7. Dashboard
+Vue d'ensemble : crédits restants, posts créés, posts programmés, accès rapide à toutes les fonctionnalités.
+
+## Tarification
+
+| Plan | Prix | Crédits | Watermark | Analyse profil | Calendrier | Support |
+|------|------|---------|-----------|----------------|------------|---------|
+| Free | 0€/mois | 10 | Oui | Non | Non | Communauté |
+| Pro | 29€/mois | 100 | Non | 1/mois | Oui | Email |
+| Business | 49€/mois | 350 | Non | Illimité | Oui | Prioritaire |
+
+### Coût en crédits par action
+- Photo : 2 crédits
+- Carousel : 3 crédits
+- Reel : 3 crédits
+
+## Architecture technique
+
+- **Frontend** : Next.js 14 App Router, React 18, Tailwind CSS
+- **Backend** : API Routes Next.js, Supabase Edge Functions
+- **Base de données** : PostgreSQL via Supabase (7 tables avec RLS)
+- **Stockage** : Supabase Storage (bucket photos, RLS par utilisateur)
+- **Auth** : Supabase Auth (email/password + Instagram OAuth via Facebook)
+- **IA** : Claude Haiku (Anthropic) pour la génération de contenu
+- **API externe** : Instagram Graph API pour la publication et l'analyse
+
+## Design
+
+- Mobile-first (max 430px)
+- Fond crème #FAF8F5
+- Terracotta #B87356 (couleur principale)
+- Vert sauge #8FA37A (couleur secondaire)
+- Police titres : Cinzel
+- Police corps : Inter
+- Boutons arrondis (rounded-2xl)
+
+## Contact
+
+- Email : groupe.cogitium@gmail.com
+- Site : https://cmdepoche.com
