@@ -69,25 +69,33 @@ export default function OnboardingPage1() {
         scanResult = await res.json();
       }
 
-      // Sauvegarde en base
+      // Sauvegarde en base (colonnes alignées sur le schéma Supabase)
       const { error: upsertError } = await supabase
         .from('profiles')
         .upsert({
           id: session.user.id,
-          instagram_handle: scanResult.handle || handle.replace('@', ''),
-          followers_count: scanResult.followers_count,
-          detected_niche: scanResult.detected_niche,
-          detected_tone: scanResult.detected_tone,
-          detected_target: scanResult.detected_target,
-          color_palette: scanResult.color_palette,
-          format_engagement: scanResult.format_engagement_estimate || scanResult.format_engagement,
-          engagement_rate: scanResult.engagement_rate,
-          optimal_slots: scanResult.optimal_slots,
-          objective,
+          email: session.user.email,
+          insta_handle: scanResult.handle || handle.replace('@', ''),
+          tone: scanResult.detected_tone,
+          niches: scanResult.detected_niche ? [scanResult.detected_niche] : [],
           updated_at: new Date().toISOString(),
         });
 
       if (upsertError) throw upsertError;
+
+      // Sauvegarde analyse détaillée
+      await supabase.from('profile_analyses').upsert({
+        user_id: session.user.id,
+        insta_handle: scanResult.handle || handle.replace('@', ''),
+        avg_engagement_rate: scanResult.engagement_rate,
+        best_format: scanResult.format_engagement_estimate
+          ? Object.entries(scanResult.format_engagement_estimate).sort(([,a],[,b]) => (b as number) - (a as number))[0]?.[0]
+          : null,
+        top_post_types: scanResult.format_engagement_estimate || [],
+        best_hours: scanResult.optimal_slots || [],
+        color_palette: scanResult.color_palette || [],
+        tone_detected: scanResult.detected_tone,
+      });
 
       // Stocke le résultat du scan pour Page 2
       sessionStorage.setItem('scan_result', JSON.stringify(scanResult));

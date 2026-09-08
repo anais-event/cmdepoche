@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -12,6 +12,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [isSignup, setIsSignup] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,7 +30,16 @@ export default function LoginPage() {
         router.push('/onboarding');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur de connexion');
+      const msg = err instanceof Error ? err.message : '';
+      const french: Record<string, string> = {
+        'Invalid login credentials': 'Email ou mot de passe incorrect',
+        'User already registered': 'Un compte existe déjà avec cet email',
+        'Email not confirmed': 'Email non confirmé, vérifie ta boîte mail',
+        'Password should be at least 6 characters': 'Le mot de passe doit faire au moins 6 caractères',
+        'Unable to validate email address: invalid format': 'Format d\'email invalide',
+        'Email rate limit exceeded': 'Trop de tentatives, réessaie dans quelques minutes',
+      };
+      setError(french[msg] || msg || 'Erreur de connexion');
     } finally {
       setLoading(false);
     }
@@ -56,15 +66,24 @@ export default function LoginPage() {
           className="input"
           required
         />
-        <input
-          type="password"
-          placeholder="Mot de passe (6 caractères min.)"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="input"
-          required
-          minLength={6}
-        />
+        <div className="relative">
+          <input
+            type={showPassword ? 'text' : 'password'}
+            placeholder="Mot de passe (6 caractères min.)"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="input w-full pr-10"
+            required
+            minLength={6}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted active:text-terra transition-colors"
+          >
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        </div>
 
         {error && <p className="text-sm text-red-500 px-1">{error}</p>}
 
