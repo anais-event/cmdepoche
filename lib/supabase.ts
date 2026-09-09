@@ -9,8 +9,11 @@ export const supabase = createBrowserClient(supabaseUrl, supabaseKey);
 
 export type Profile = {
   id: string;
-  instagram_handle: string | null;
+  email: string | null;
+  insta_handle: string | null;
   instagram_user_id: string | null;
+  instagram_access_token: string | null;
+  instagram_token_expires_at: string | null;
   followers_count: number | null;
   engagement_rate: number | null;
   detected_tone: string | null;
@@ -31,6 +34,11 @@ export type Profile = {
   optimal_slots: { day: string; time: string }[] | null;
   format_engagement: { photo: number; carousel: number; reel: number } | null;
   expert_advice: ExpertAdvice | null;
+  brand_name: string | null;
+  brand_desc: string | null;
+  tone: string | null;
+  niches: string[] | null;
+  frequency: string | null;
   onboarding_completed: boolean;
   created_at: string;
   updated_at: string;
@@ -106,6 +114,35 @@ export type Analytics = {
   engagement_count: number;
   engagement_rate: number;
   profile_clicks: number;
+  fetched_at: string;
+};
+
+export type InstagramMedia = {
+  id: string;
+  user_id: string;
+  ig_media_id: string;
+  media_type: 'IMAGE' | 'VIDEO' | 'CAROUSEL_ALBUM';
+  media_url: string | null;
+  thumbnail_url: string | null;
+  caption: string | null;
+  permalink: string | null;
+  like_count: number;
+  comments_count: number;
+  timestamp: string;
+  insights: Record<string, number>;
+  fetched_at: string;
+};
+
+export type InstagramAccountInsight = {
+  id: string;
+  user_id: string;
+  period: string;
+  date: string;
+  impressions: number;
+  reach: number;
+  profile_views: number;
+  website_clicks: number;
+  follower_count: number;
   fetched_at: string;
 };
 
