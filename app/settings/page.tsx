@@ -5,17 +5,23 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import BottomNav from '@/components/bottom-nav';
 import BackButton from '@/components/back-button';
-import { User, RefreshCw, CreditCard, LogOut, ChevronRight, Crown } from 'lucide-react';
+import { User, RefreshCw, CreditCard, LogOut, ChevronRight, Crown, Instagram, Check, AlertCircle } from 'lucide-react';
 
 export default function SettingsPage() {
   const router = useRouter();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [profile, setProfile] = useState<any>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+  const igStatus = searchParams?.get('instagram');
+  const igError = searchParams?.get('error');
 
   useEffect(() => {
     const load = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
+      setUserId(session.user.id);
 
       const { data: p } = await supabase
         .from('profiles')
@@ -83,6 +89,51 @@ export default function SettingsPage() {
           >
             Passer Pro
           </button>
+        )}
+      </div>
+
+      {/* Connexion Instagram */}
+      <div className="card mb-6">
+        <div className="flex items-center gap-3">
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+            profile?.instagram_access_token ? 'bg-sage-bg' : 'bg-border-l'
+          }`}>
+            <Instagram size={18} className={profile?.instagram_access_token ? 'text-sage' : 'text-muted'} />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-medium text-text">
+              {profile?.instagram_access_token ? 'Instagram connecté' : 'Connecter Instagram'}
+            </p>
+            <p className="text-xs text-sub">
+              {profile?.instagram_access_token
+                ? `@${profile.insta_handle || 'connecté'}`
+                : 'Synchronise tes stats et ton profil'}
+            </p>
+          </div>
+          {profile?.instagram_access_token ? (
+            <Check size={18} className="text-sage" />
+          ) : (
+            <a
+              href={`/api/auth/instagram?user_id=${userId}`}
+              className="text-xs text-white font-medium bg-terra px-3 py-1.5 rounded-pill"
+            >
+              Connecter
+            </a>
+          )}
+        </div>
+        {igStatus === 'connected' && (
+          <p className="text-xs text-sage mt-3 flex items-center gap-1">
+            <Check size={12} /> Instagram connecté avec succès !
+          </p>
+        )}
+        {igError && (
+          <p className="text-xs text-red-400 mt-3 flex items-center gap-1">
+            <AlertCircle size={12} />
+            {igError === 'no_page' ? 'Aucune Page Facebook liée trouvée'
+              : igError === 'no_instagram' ? 'Aucun compte Instagram Pro/Business lié à ta Page'
+              : igError === 'instagram_denied' ? 'Connexion annulée'
+              : 'Erreur de connexion Instagram'}
+          </p>
         )}
       </div>
 
