@@ -18,6 +18,7 @@ export default function ImportPage() {
   const [visuals, setVisuals] = useState<VisualFile[]>([]);
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [dragging, setDragging] = useState(false);
 
   useEffect(() => {
     const getUser = async () => {
@@ -28,13 +29,7 @@ export default function ImportPage() {
   }, []);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    const newVisuals = files.map((file) => ({
-      file,
-      preview: URL.createObjectURL(file),
-      isVideo: file.type.startsWith('video/'),
-    }));
-    setVisuals((prev) => [...prev, ...newVisuals]);
+    if (e.target.files) addFiles(e.target.files);
   };
 
   const removeVisual = (index: number) => {
@@ -42,6 +37,22 @@ export default function ImportPage() {
       URL.revokeObjectURL(prev[index].preview);
       return prev.filter((_, i) => i !== index);
     });
+  };
+
+  const addFiles = (files: FileList | File[]) => {
+    const arr = Array.from(files).filter(f => f.type.startsWith('image/') || f.type.startsWith('video/'));
+    const newVisuals = arr.map((file) => ({
+      file,
+      preview: URL.createObjectURL(file),
+      isVideo: file.type.startsWith('video/'),
+    }));
+    setVisuals((prev) => [...prev, ...newVisuals]);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+    if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
   };
 
   const videoCount = visuals.filter((v) => v.isVideo).length;
@@ -79,11 +90,21 @@ export default function ImportPage() {
       <h1 className="font-cinzel text-xl font-semibold text-text mt-4 mb-1">Import des visuels</h1>
       <p className="text-sm text-sub mb-6">Choisis les visuels pour ta semaine de contenu</p>
 
-      {/* Bouton d'import principal */}
-      <label className="flex flex-col items-center justify-center gap-3 py-12 rounded-card border-2 border-dashed border-border cursor-pointer active:border-terra transition-colors mb-4">
-        <ImagePlus size={36} className="text-muted" />
-        <span className="text-sm font-medium text-text">Choisir mes visuels</span>
-        <span className="text-xs text-muted">Photos et vidéos depuis ta pellicule</span>
+      {/* Zone d'import — drag & drop sur desktop, tap sur mobile */}
+      <label
+        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={handleDrop}
+        className={`flex flex-col items-center justify-center gap-3 py-12 rounded-card border-2 border-dashed cursor-pointer transition-colors mb-4 ${
+          dragging ? 'border-terra bg-terra-bg' : 'border-border active:border-terra'
+        }`}
+      >
+        <ImagePlus size={36} className={dragging ? 'text-terra' : 'text-muted'} />
+        <span className="text-sm font-medium text-text">
+          {dragging ? 'Dépose tes visuels ici' : 'Choisir mes visuels'}
+        </span>
+        <span className="text-xs text-muted hidden md:block">Glisse-dépose tes fichiers ou clique pour parcourir</span>
+        <span className="text-xs text-muted md:hidden">Photos et vidéos depuis ta pellicule</span>
         <input
           type="file"
           accept="image/*,video/*"
@@ -95,7 +116,7 @@ export default function ImportPage() {
 
       {/* Grille des visuels sélectionnés */}
       {visuals.length > 0 && (
-        <div className="grid grid-cols-3 gap-2 mb-6">
+        <div className="grid grid-cols-3 md:grid-cols-4 gap-2 md:gap-3 mb-6">
           {visuals.map((v, i) => (
             <div key={i} className="relative aspect-square rounded-input overflow-hidden border border-border">
               {v.isVideo ? (

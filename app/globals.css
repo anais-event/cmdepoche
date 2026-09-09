@@ -32,6 +32,16 @@
     @apply max-w-mobile mx-auto w-full px-4;
   }
 
+  /* Conteneur responsive — mobile étroit, desktop large */
+  .container-app {
+    @apply max-w-mobile mx-auto w-full px-4;
+  }
+  @media (min-width: 768px) {
+    .container-app {
+      max-width: 720px;
+    }
+  }
+
   /* Bouton CTA principal — pill terracotta */
   .btn-primary {
     @apply w-full py-4 rounded-pill bg-terra text-white font-semibold text-base

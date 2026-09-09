@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import AuthSync from '@/components/auth-sync';
+import AppShell from '@/components/app-shell';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -18,9 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="fr">
       <body>
         <AuthSync />
-        <div className="container-mobile flex min-h-screen flex-col">
-          {children}
-        </div>
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );
