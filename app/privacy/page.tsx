@@ -1,6 +1,20 @@
+'use client';
+
 export default function PrivacyPage() {
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+  const deletionCode = searchParams?.get('deletion');
+
   return (
     <div className="max-w-2xl mx-auto py-12 px-4">
+      {deletionCode && (
+        <div className="bg-sage-bg border border-sage/20 rounded-xl p-4 mb-6">
+          <h2 className="font-cinzel text-base font-semibold text-text mb-1">Suppression confirmée</h2>
+          <p className="text-sm text-sub">
+            Vos données Instagram ont été supprimées. Code de confirmation : <code className="text-xs bg-card-alt px-1.5 py-0.5 rounded">{deletionCode}</code>
+          </p>
+        </div>
+      )}
+
       <h1 className="font-cinzel text-2xl font-semibold text-text mb-8">Politique de confidentialité</h1>
 
       <div className="space-y-6 text-sm text-sub leading-relaxed">
