@@ -6,12 +6,11 @@ import { supabase } from '@/lib/supabase';
 import BottomNav from '@/components/bottom-nav';
 import BackButton from '@/components/back-button';
 import { User, RefreshCw, CreditCard, LogOut, ChevronRight, Crown } from 'lucide-react';
-import type { Profile, Subscription } from '@/lib/supabase';
 
 export default function SettingsPage() {
   const router = useRouter();
-  const [profile, setProfile] = useState<Partial<Profile> | null>(null);
-  const [subscription, setSubscription] = useState<Partial<Subscription> | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [profile, setProfile] = useState<any>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -24,13 +23,6 @@ export default function SettingsPage() {
         .eq('id', session.user.id)
         .single();
       setProfile(p);
-
-      const { data: s } = await supabase
-        .from('subscriptions')
-        .select('*')
-        .eq('user_id', session.user.id)
-        .single();
-      setSubscription(s);
     };
     load();
   }, []);
@@ -40,36 +32,26 @@ export default function SettingsPage() {
     router.push('/login');
   };
 
-  const plan = subscription?.plan || 'free';
+  const plan = profile?.plan || 'free';
 
   const menuItems = [
     {
       icon: User,
       label: 'Mon profil Instagram',
-      desc: profile?.instagram_handle ? `@${profile.instagram_handle}` : 'Non configuré',
+      desc: profile?.insta_handle ? `@${profile.insta_handle}` : 'Non configuré',
       action: () => router.push('/settings/profile'),
     },
     {
       icon: RefreshCw,
       label: 'Relancer le diagnostic',
       desc: 'Mettre à jour ton analyse et SWOT',
-      action: () => router.push('/onboarding/analysis'),
+      action: () => router.push('/onboarding'),
     },
     {
       icon: CreditCard,
       label: 'Mon abonnement',
-      desc: plan === 'pro' ? 'Pro — 19€/mois' : 'Gratuit',
-      action: async () => {
-        if (plan === 'pro') {
-          const res = await fetch('/api/stripe/portal', { method: 'POST' });
-          const data = await res.json();
-          if (data.url) window.location.href = data.url;
-        } else {
-          const res = await fetch('/api/stripe/checkout', { method: 'POST' });
-          const data = await res.json();
-          if (data.url) window.location.href = data.url;
-        }
-      },
+      desc: plan === 'pro' ? 'Pro — 19€/mois' : plan === 'business' ? 'Business — 49€/mois' : 'Gratuit',
+      action: () => router.push('/landing#pricing'),
     },
   ];
 
