@@ -1,22 +1,23 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import DemoScan from '@/components/demo-scan';
 
 export const metadata: Metadata = {
-  title: 'CM de Poche — Ta semaine de posts créée en 3 minutes',
-  description: 'Fini les heures à chercher quoi poster. CM de Poche génère ta semaine complète (légendes, hashtags, horaires) adaptée à ta voix et ta niche. Pour micro-influenceurs Instagram & TikTok.',
-  keywords: 'community manager, micro-influenceur, Instagram, TikTok, contenu automatique, calendrier éditorial, IA, social media, générateur de posts',
+  title: 'CM de Poche | Ton assistant pour créer du contenu Instagram',
+  description: 'CM de Poche crée, planifie et programme tes contenus Instagram à partir de tes propres photos et vidéos. Pour créateurs, indépendants et petites activités qui veulent poster régulièrement sans y passer des heures.',
+  keywords: 'community manager Instagram, création de contenu Instagram, gestion des réseaux sociaux, outil Instagram, planification Instagram, assistant Instagram',
   authors: [{ name: 'CM de Poche' }],
   openGraph: {
-    title: 'CM de Poche — Ta semaine de posts créée en 3 minutes',
-    description: 'Fini les heures à chercher quoi poster. L\'IA génère ta semaine complète, à ta voix, prête à publier.',
+    title: 'CM de Poche | Ton assistant pour créer du contenu Instagram',
+    description: 'Analyse ton compte, crée tes contenus et planifie ta semaine Instagram. À partir de tes propres photos et vidéos.',
     type: 'website',
     locale: 'fr_FR',
     siteName: 'CM de Poche',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'CM de Poche — Ta semaine de posts en 3 minutes',
-    description: 'Génération IA de contenu pour micro-influenceurs. Instagram & TikTok.',
+    title: 'CM de Poche | Assistant création de contenu Instagram',
+    description: 'Analyse, création de contenu et planification Instagram pour créateurs et indépendants.',
   },
   robots: { index: true, follow: true },
 };
@@ -27,15 +28,58 @@ const jsonLd = {
   name: 'CM de Poche',
   applicationCategory: 'BusinessApplication',
   operatingSystem: 'Web',
-  description: 'Application SaaS pour micro-influenceurs. Génère une semaine complète de contenu Instagram et TikTok en 3 minutes.',
+  description: 'Assistant de création de contenu et de gestion de compte Instagram. Analyse de profil, création de posts, planification hebdomadaire et suivi des performances.',
   url: 'https://cmdepoche.com',
   offers: [
-    { '@type': 'Offer', name: 'Free', price: '0', priceCurrency: 'EUR', description: '10 crédits/mois' },
+    { '@type': 'Offer', name: 'Gratuit', price: '0', priceCurrency: 'EUR', description: '10 crédits/mois' },
     { '@type': 'Offer', name: 'Pro', price: '29', priceCurrency: 'EUR', billingIncrement: 'P1M', description: '100 crédits/mois, analyse profil' },
     { '@type': 'Offer', name: 'Business', price: '49', priceCurrency: 'EUR', billingIncrement: 'P1M', description: '350 crédits/mois, analyses illimitées' },
   ],
-  featureList: ['Génération IA de contenu', 'Calendrier éditorial saisonnier', 'Programmation Instagram/TikTok', 'Analyse de profil Instagram'],
+  featureList: [
+    'Analyse de compte Instagram',
+    'Création de contenu à partir de photos et vidéos',
+    'Planification hebdomadaire',
+    'Programmation des publications',
+    'Suivi des performances',
+  ],
   creator: { '@type': 'Organization', name: 'CM de Poche' },
+};
+
+const faqJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: [
+    {
+      '@type': 'Question',
+      name: 'Qu\'est-ce que CM de Poche ?',
+      acceptedAnswer: { '@type': 'Answer', text: 'CM de Poche est un assistant qui analyse ton compte Instagram, crée tes contenus à partir de tes propres photos et vidéos, et planifie ta semaine de publications.' },
+    },
+    {
+      '@type': 'Question',
+      name: 'À qui s\'adresse CM de Poche ?',
+      acceptedAnswer: { '@type': 'Answer', text: 'Aux créateurs, indépendants, artisans et petites activités qui veulent poster régulièrement sur Instagram sans y consacrer des heures chaque semaine.' },
+    },
+    {
+      '@type': 'Question',
+      name: 'CM de Poche peut-il créer mes contenus Instagram ?',
+      acceptedAnswer: { '@type': 'Answer', text: 'Oui. Tu fournis tes photos et vidéos, CM de Poche écrit les légendes à ta voix, choisit les hashtags et programme les publications aux meilleurs horaires.' },
+    },
+    {
+      '@type': 'Question',
+      name: 'Est-ce que je dois fournir mes propres photos et vidéos ?',
+      acceptedAnswer: { '@type': 'Answer', text: 'Oui. CM de Poche utilise tes visuels pour créer des contenus authentiques qui te ressemblent. Pas de banque d\'images générique.' },
+    },
+    {
+      '@type': 'Question',
+      name: 'CM de Poche peut-il programmer mes publications ?',
+      acceptedAnswer: { '@type': 'Answer', text: 'Oui. Une fois tes contenus validés, CM de Poche les programme aux horaires où ton audience est la plus active.' },
+    },
+    {
+      '@type': 'Question',
+      name: 'Est-ce que CM de Poche analyse les performances de mon compte ?',
+      acceptedAnswer: { '@type': 'Answer', text: 'Oui. CM de Poche suit l\'engagement, identifie les formats et sujets qui fonctionnent, et adapte ses recommandations au fil du temps.' },
+    },
+  ],
 };
 
 export default function LandingPage() {
@@ -44,6 +88,10 @@ export default function LandingPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
 
       {/* ─── NAV ─── */}
@@ -64,113 +112,19 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      {/* ─── HERO ─── */}
+      {/* ─── HERO + MINI-SCAN ─── */}
       <section className="w-full max-w-3xl mx-auto px-6 pt-20 pb-16 text-center">
-        <p className="text-sage font-semibold text-sm tracking-wide mb-6">Pour créateurs & micro-influenceurs</p>
-        <h1 className="text-4xl sm:text-5xl lg:text-[3.5rem] font-cinzel font-bold text-text leading-[1.15] mb-6">
-          Tu crées du contenu.<br />
-          Pas un planning.
+        <p className="text-terra font-semibold text-sm tracking-wide mb-4 font-cinzel">CM DE POCHE</p>
+        <h1 className="text-4xl sm:text-5xl lg:text-[3.5rem] font-cinzel font-bold text-text leading-[1.15] mb-3">
+          Ton compte Instagram<br />pourrait faire mieux.
         </h1>
-        <p className="text-lg text-sub max-w-xl mx-auto mb-10 leading-relaxed">
-          Dis-nous qui tu es. En 3 minutes, CM de Poche génère ta semaine de posts — légendes, hashtags, horaires — prête à publier. À ta voix.
+        <p className="text-xl sm:text-2xl font-cinzel text-sub mb-6">
+          Voyons déjà ce qu&apos;il raconte.
         </p>
-        <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <Link href="/login" className="px-8 py-3.5 rounded-pill bg-terra text-white font-semibold hover:opacity-90 transition-opacity">
-            Essayer gratuitement
-          </Link>
-          <a href="#comment" className="px-8 py-3.5 rounded-pill border border-border text-text font-semibold hover:border-terra hover:text-terra transition-colors">
-            Voir comment ça marche
-          </a>
-        </div>
-        <p className="text-xs text-muted mt-5">10 crédits offerts · Pas de carte bancaire</p>
-      </section>
-
-      {/* ─── LE VRAI PROBLÈME ─── */}
-      <section className="w-full max-w-3xl mx-auto px-6 py-20">
-        <div className="text-center mb-14">
-          <h2 className="text-3xl sm:text-4xl font-cinzel font-bold text-text leading-tight">
-            Tu sais que poster régulièrement<br />fait grandir ta communauté.
-          </h2>
-          <p className="text-lg text-sub mt-4">Le problème, c&apos;est tout le reste.</p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {[
-            {
-              title: 'Le dimanche soir à chercher quoi poster',
-              desc: 'Ce n\'est pas l\'inspiration qui manque. C\'est l\'énergie de recommencer chaque semaine.',
-            },
-            {
-              title: 'Des posts soignés, zéro engagement',
-              desc: 'Mauvais hashtags, mauvais horaire, mauvais format. Et aucun moyen de savoir lequel.',
-            },
-            {
-              title: '2 heures pour 3 posts',
-              desc: 'Trouver l\'idée, écrire la légende, chercher les hashtags, choisir l\'heure… Un rituel épuisant.',
-            },
-            {
-              title: '10 jours sans poster (encore)',
-              desc: 'La vie reprend le dessus. L\'algorithme te pénalise. Tu recommences de zéro.',
-            },
-          ].map((pain) => (
-            <div key={pain.title} className="bg-card rounded-card p-6 border border-border">
-              <h3 className="font-semibold text-text mb-2">{pain.title}</h3>
-              <p className="text-sm text-sub leading-relaxed">{pain.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ─── LA SOLUTION — MOCK PLANNING ─── */}
-      <section className="w-full max-w-3xl mx-auto px-6 py-20">
-        <div className="text-center mb-14">
-          <p className="text-sage font-semibold text-sm tracking-wide mb-3">La solution</p>
-          <h2 className="text-3xl sm:text-4xl font-cinzel font-bold text-text">
-            CM de Poche fait le travail.<br />Tu valides.
-          </h2>
-        </div>
-
-        <div className="bg-card rounded-card border border-border p-6 sm:p-8 max-w-md mx-auto shadow-sm">
-          <div className="flex justify-between items-center mb-5">
-            <div>
-              <p className="text-xs text-terra font-semibold uppercase tracking-wider">Ta semaine</p>
-              <p className="text-lg font-cinzel font-bold text-text mt-0.5">Semaine du 8 sept.</p>
-            </div>
-            <span className="bg-sage-bg text-sage text-xs font-semibold px-3 py-1 rounded-pill">5 posts</span>
-          </div>
-          <div className="flex flex-col gap-2.5">
-            {[
-              { day: 'Lundi', time: '18:30', format: 'Photo', caption: 'La rentrée c\'est le moment de…', score: 94 },
-              { day: 'Mardi', time: '12:15', format: 'Carrousel', caption: '3 erreurs que tout le monde…', score: 91 },
-              { day: 'Jeudi', time: '19:00', format: 'Reel', caption: 'POV : tu découvres que…', score: 96 },
-              { day: 'Vendredi', time: '08:30', format: 'Photo', caption: 'Ce weekend je vous prépare…', score: 88 },
-              { day: 'Dimanche', time: '17:45', format: 'Carrousel', caption: 'Recap de la semaine…', score: 92 },
-            ].map((post) => (
-              <div key={post.day} className="flex items-center gap-3 p-3 rounded-input bg-bg">
-                <div className="w-9 h-9 rounded-lg bg-terra-bg flex items-center justify-center text-xs font-bold text-terra flex-shrink-0">
-                  {post.format === 'Reel' ? '▶' : '◫'}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-text">{post.day}</span>
-                    <span className="text-[11px] text-muted">{post.time}</span>
-                    <span className="text-[10px] bg-border-l text-sub px-1.5 py-0.5 rounded">{post.format}</span>
-                  </div>
-                  <p className="text-xs text-muted truncate">{post.caption}</p>
-                </div>
-                <span className={`text-xs font-bold ${post.score >= 90 ? 'text-sage' : 'text-terra'}`}>
-                  {post.score}
-                </span>
-              </div>
-            ))}
-          </div>
-          <div className="mt-5 pt-4 border-t border-border-l flex items-center justify-between">
-            <span className="text-xs text-muted">Généré en 47 secondes</span>
-            <span className="bg-terra text-white text-xs font-semibold px-4 py-2 rounded-pill">
-              Programmer tout
-            </span>
-          </div>
-        </div>
+        <p className="text-base text-sub max-w-lg mx-auto mb-8">
+          Entre ton @Instagram. CM de Poche analyse ton compte et te montre ce qu&apos;il repère.
+        </p>
+        <DemoScan />
       </section>
 
       {/* ─── COMMENT ÇA MARCHE ─── */}
@@ -180,9 +134,9 @@ export default function LandingPage() {
         </div>
         <div className="flex flex-col gap-8">
           {[
-            { n: '01', title: 'Décris-toi', desc: 'Ta niche, ton style, ton objectif. Tu fais ça une seule fois.', note: '2 min' },
-            { n: '02', title: 'Importe tes visuels', desc: 'Glisse tes photos, on les associe aux posts automatiquement.', note: '1 min' },
-            { n: '03', title: 'Reçois ta semaine', desc: 'Légendes à ta voix, hashtags stratégiques, horaires optimaux, formats variés. Tout est prêt.', note: '47s' },
+            { n: '01', title: 'Analyse ton compte', desc: 'CM de Poche regarde ton profil, tes contenus, ton rythme. Il comprend ce que tu fais.', note: 'Automatique' },
+            { n: '02', title: 'Importe tes visuels', desc: 'Glisse tes photos et vidéos. CM de Poche les associe aux posts qu\'il prépare.', note: '1 min' },
+            { n: '03', title: 'Reçois ta semaine', desc: 'Légendes à ta voix, hashtags, horaires, formats. Tout est prêt.', note: '3 min' },
             { n: '04', title: 'Valide et programme', desc: 'Modifie si tu veux, puis programme. CM de Poche publie au bon moment.', note: '1 min' },
           ].map((step) => (
             <div key={step.n} className="flex gap-5 items-start">
@@ -199,62 +153,121 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ─── COMPARAISON ─── */}
-      <section className="w-full max-w-4xl mx-auto px-6 py-20">
+      {/* ─── CRÉATION DE CONTENU ─── */}
+      <section className="w-full max-w-3xl mx-auto px-6 py-20">
         <div className="text-center mb-14">
           <h2 className="text-3xl font-cinzel font-bold text-text">
-            « J&apos;ai déjà Canva et ChatGPT. »
+            Tes contenus, créés à partir de tes visuels
           </h2>
-          <p className="text-sub mt-3">Nous aussi. Aucun des deux ne gère ta semaine.</p>
+          <p className="text-sub mt-3 max-w-xl mx-auto">
+            Tu fournis tes photos et vidéos. CM de Poche écrit les légendes, choisit les hashtags et prépare chaque post.
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-card rounded-card p-6 border border-border">
-            <h3 className="font-semibold text-text text-lg mb-2">Canva</h3>
-            <p className="text-sm text-sub leading-relaxed mb-4">
-              De beaux visuels, mais pas de légendes, pas de stratégie, pas de planning.
-            </p>
-            <p className="text-xs text-sub/60">Visuels sans direction</p>
-          </div>
-
-          <div className="bg-card rounded-card p-6 border border-border">
-            <h3 className="font-semibold text-text text-lg mb-2">ChatGPT</h3>
-            <p className="text-sm text-sub leading-relaxed mb-4">
-              Du texte générique. À toi de prompter, structurer, planifier, programmer.
-            </p>
-            <p className="text-xs text-sub/60">Texte sans contexte</p>
-          </div>
-
-          <div className="bg-card rounded-card p-6 border-2 border-terra relative">
-            <div className="absolute -top-2.5 left-5 bg-terra text-white text-[10px] font-bold px-3 py-0.5 rounded-pill">
-              Tout-en-un
+        <div className="bg-card rounded-card border border-border p-6 sm:p-8 max-w-md mx-auto shadow-sm">
+          <div className="flex justify-between items-center mb-5">
+            <div>
+              <p className="text-xs text-terra font-semibold uppercase tracking-wider">Ta semaine</p>
+              <p className="text-lg font-cinzel font-bold text-text mt-0.5">Semaine du 8 sept.</p>
             </div>
-            <h3 className="font-semibold text-terra text-lg mb-2">CM de Poche</h3>
-            <p className="text-sm text-sub leading-relaxed mb-4">
-              Légendes à ta voix, hashtags, horaires, calendrier saisonnier. Généré et programmé en 3 minutes.
-            </p>
-            <p className="text-xs text-sage font-semibold">Rien à assembler</p>
+            <span className="bg-sage-bg text-sage text-xs font-semibold px-3 py-1 rounded-pill">5 posts</span>
+          </div>
+          <div className="flex flex-col gap-2.5">
+            {[
+              { day: 'Lundi', time: '18:30', format: 'Photo', caption: 'La rentrée c\'est le moment de…' },
+              { day: 'Mardi', time: '12:15', format: 'Carrousel', caption: '3 erreurs que tout le monde…' },
+              { day: 'Jeudi', time: '19:00', format: 'Reel', caption: 'POV : tu découvres que…' },
+              { day: 'Vendredi', time: '08:30', format: 'Photo', caption: 'Ce weekend je vous prépare…' },
+              { day: 'Dimanche', time: '17:45', format: 'Carrousel', caption: 'Recap de la semaine…' },
+            ].map((post) => (
+              <div key={post.day} className="flex items-center gap-3 p-3 rounded-input bg-bg">
+                <div className="w-9 h-9 rounded-lg bg-terra-bg flex items-center justify-center text-xs font-bold text-terra flex-shrink-0">
+                  {post.format === 'Reel' ? '▶' : '◫'}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-text">{post.day}</span>
+                    <span className="text-[11px] text-muted">{post.time}</span>
+                    <span className="text-[10px] bg-border-l text-sub px-1.5 py-0.5 rounded">{post.format}</span>
+                  </div>
+                  <p className="text-xs text-muted truncate">{post.caption}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-5 pt-4 border-t border-border-l flex items-center justify-between">
+            <span className="text-xs text-muted">Prêt à publier</span>
+            <span className="bg-terra text-white text-xs font-semibold px-4 py-2 rounded-pill">
+              Programmer tout
+            </span>
           </div>
         </div>
       </section>
 
-      {/* ─── FONCTIONNALITÉS ─── */}
-      <section className="w-full max-w-4xl mx-auto px-6 py-20">
+      {/* ─── PLANNING INSTAGRAM ─── */}
+      <section className="w-full max-w-3xl mx-auto px-6 py-20">
         <div className="text-center mb-14">
-          <h2 className="text-3xl font-cinzel font-bold text-text">Ce qui est inclus</h2>
+          <h2 className="text-3xl font-cinzel font-bold text-text">
+            Un planning qui tient la semaine
+          </h2>
+          <p className="text-sub mt-3 max-w-xl mx-auto">
+            CM de Poche choisit les jours, les horaires et les formats. Tu n&apos;as pas besoin de réfléchir à quand poster.
+          </p>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
-            { title: 'Légendes à ta voix', desc: 'L\'IA écrit dans ton ton. Inspirant, éducatif, drôle, authentique — toi, en mieux structuré.' },
-            { title: 'Calendrier saisonnier', desc: '40+ événements français intégrés. Saint-Valentin, rentrée, Black Friday — suggérés au bon moment.' },
-            { title: 'Hashtags stratégiques', desc: 'Mix automatique : gros, moyens, niche. La bonne combinaison pour maximiser ta portée.' },
-            { title: 'Horaires optimaux', desc: 'Publie quand ton audience est active. Créneaux calculés par format et par jour.' },
-            { title: 'Analyse de profil', desc: 'Comprends ce qui marche. Engagement, formats, audience. Données réelles.' },
-            { title: 'Mobile-first', desc: 'Conçu pour ton téléphone. Crée ta semaine depuis le canapé ou entre deux rendez-vous.' },
-          ].map((f) => (
-            <div key={f.title} className="bg-card rounded-card p-6 border border-border">
-              <h3 className="font-semibold text-text mb-2">{f.title}</h3>
-              <p className="text-sm text-sub leading-relaxed">{f.desc}</p>
+            { title: 'Horaires calculés', desc: 'Chaque post est programmé quand ton audience est la plus active.' },
+            { title: 'Formats variés', desc: 'Photos, carrousels, Reels — un mix pensé pour l\'algorithme.' },
+            { title: 'Calendrier saisonnier', desc: '40+ événements français intégrés. Les occasions sont suggérées au bon moment.' },
+          ].map((item) => (
+            <div key={item.title} className="bg-card rounded-card p-6 border border-border">
+              <h3 className="font-semibold text-text mb-2">{item.title}</h3>
+              <p className="text-sm text-sub leading-relaxed">{item.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ─── ANALYSE ET APPRENTISSAGE ─── */}
+      <section className="w-full max-w-3xl mx-auto px-6 py-20">
+        <div className="text-center mb-14">
+          <h2 className="text-3xl font-cinzel font-bold text-text">
+            Il apprend ce qui marche pour toi
+          </h2>
+          <p className="text-sub mt-3 max-w-xl mx-auto">
+            CM de Poche suit tes performances, identifie ce qui fonctionne et ajuste ses recommandations.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {[
+            { title: 'Engagement suivi', desc: 'Likes, commentaires, partages — tout est mesuré post par post.' },
+            { title: 'Sujets qui marchent', desc: 'CM de Poche repère les thèmes qui intéressent ton audience.' },
+            { title: 'Formats gagnants', desc: 'Photo, carrousel ou Reel ? Les données te le disent.' },
+            { title: 'Progression visible', desc: 'Semaine après semaine, tu vois ce qui avance.' },
+          ].map((item) => (
+            <div key={item.title} className="bg-card rounded-card p-6 border border-border">
+              <h3 className="font-semibold text-text mb-2">{item.title}</h3>
+              <p className="text-sm text-sub leading-relaxed">{item.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ─── POUR QUI ─── */}
+      <section className="w-full max-w-3xl mx-auto px-6 py-20">
+        <div className="text-center mb-14">
+          <h2 className="text-3xl font-cinzel font-bold text-text">Pour qui ?</h2>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {[
+            { title: 'Créateurs de contenu', desc: 'Tu produis déjà du contenu mais tu perds du temps à organiser ta semaine.' },
+            { title: 'Indépendants', desc: 'Instagram est un canal d\'acquisition, pas ton métier. CM de Poche s\'en occupe.' },
+            { title: 'Artisans et commerçants', desc: 'Tu as de belles choses à montrer mais pas le temps de poster régulièrement.' },
+            { title: 'Petites activités', desc: 'Pas de budget pour un CM. CM de Poche fait le travail pour une fraction du prix.' },
+          ].map((item) => (
+            <div key={item.title} className="bg-card rounded-card p-6 border border-border">
+              <h3 className="font-semibold text-text mb-2">{item.title}</h3>
+              <p className="text-sm text-sub leading-relaxed">{item.desc}</p>
             </div>
           ))}
         </div>
@@ -337,28 +350,36 @@ export default function LandingPage() {
         <div className="flex flex-col gap-3">
           {[
             {
-              q: 'C\'est quoi CM de Poche ?',
-              a: 'Une app qui génère ta semaine de posts Instagram/TikTok en 3 minutes. Légendes à ta voix, hashtags, horaires, calendrier saisonnier. Tu valides, on programme.',
+              q: 'Qu\'est-ce que CM de Poche ?',
+              a: 'Un assistant qui analyse ton compte Instagram, crée tes contenus à partir de tes propres photos et vidéos, et planifie ta semaine de publications.',
+            },
+            {
+              q: 'À qui s\'adresse CM de Poche ?',
+              a: 'Aux créateurs, indépendants, artisans et petites activités qui veulent poster régulièrement sur Instagram sans y consacrer des heures.',
+            },
+            {
+              q: 'CM de Poche peut-il créer mes contenus Instagram ?',
+              a: 'Oui. Tu fournis tes photos et vidéos, CM de Poche écrit les légendes à ta voix, choisit les hashtags et programme les publications aux meilleurs horaires.',
+            },
+            {
+              q: 'Est-ce que je dois fournir mes propres photos et vidéos ?',
+              a: 'Oui. CM de Poche utilise tes visuels pour créer des contenus authentiques qui te ressemblent. Pas de banque d\'images générique.',
+            },
+            {
+              q: 'CM de Poche peut-il programmer mes publications ?',
+              a: 'Oui. Une fois tes contenus validés, CM de Poche les programme aux horaires où ton audience est la plus active.',
+            },
+            {
+              q: 'Est-ce que CM de Poche analyse les performances de mon compte ?',
+              a: 'Oui. CM de Poche suit l\'engagement, identifie les formats et sujets qui fonctionnent, et adapte ses recommandations au fil du temps.',
             },
             {
               q: 'En quoi c\'est différent de ChatGPT ?',
-              a: 'ChatGPT donne du texte brut. CM de Poche connaît ta niche, ton ton, la saison, tes meilleurs horaires. Et il programme tout directement — pas de copier-coller.',
-            },
-            {
-              q: 'Les légendes sont vraiment à ma voix ?',
-              a: 'Tu choisis ton ton (inspirant, éducatif, drôle, authentique…) et l\'IA s\'adapte. Chaque post est modifiable avant publication.',
-            },
-            {
-              q: 'Je dois connecter mon Instagram ?',
-              a: 'Pour la programmation et l\'analyse : oui, via connexion sécurisée. Pour la génération seule : non, tu peux commencer sans.',
+              a: 'ChatGPT donne du texte brut. CM de Poche connaît ta niche, ton ton, la saison, tes meilleurs horaires. Et il programme tout directement.',
             },
             {
               q: 'Mes données sont en sécurité ?',
-              a: 'Hébergement Europe, chiffrement TLS + AES-256, isolation par utilisateur. Aucune donnée vendue. Suppression immédiate sur demande. RGPD.',
-            },
-            {
-              q: 'Je peux annuler quand je veux ?',
-              a: 'Oui. Zéro engagement, zéro frais cachés. Le plan gratuit reste gratuit pour toujours.',
+              a: 'Hébergement Europe, chiffrement TLS + AES-256, isolation par utilisateur. Aucune donnée vendue. Suppression sur demande. RGPD.',
             },
           ].map((faq) => (
             <details key={faq.q} className="bg-card rounded-card border border-border overflow-hidden group">
@@ -379,9 +400,9 @@ export default function LandingPage() {
         <h2 className="text-3xl sm:text-4xl font-cinzel font-bold text-text mb-4">
           Prêt à poster sans y penser ?
         </h2>
-        <p className="text-sub mb-8">3 minutes. Aucune carte bancaire.</p>
+        <p className="text-sub mb-8">Pas de carte bancaire.</p>
         <Link href="/login" className="inline-block px-10 py-4 rounded-pill bg-terra text-white font-semibold text-lg hover:opacity-90 transition-opacity">
-          Créer mon premier planning
+          Créer mon compte gratuitement
         </Link>
       </section>
 
@@ -396,6 +417,7 @@ export default function LandingPage() {
           </div>
           <div className="flex gap-6 text-sm text-sub">
             <a href="#faq" className="hover:text-text transition-colors">FAQ</a>
+            <Link href="/privacy" className="hover:text-text transition-colors">Confidentialité</Link>
             <a href="mailto:groupe.cogitium@gmail.com" className="hover:text-text transition-colors">Contact</a>
           </div>
           <p className="text-xs text-muted">© 2026 CM de Poche</p>
