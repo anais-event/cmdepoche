@@ -78,10 +78,10 @@ export default function SuccessPage() {
           Modifier
         </button>
         <button
-          onClick={() => router.push('/dashboard')}
+          onClick={() => router.push('/resultats')}
           className="btn-primary"
         >
-          Tableau de bord
+          Voir mes résultats
         </button>
         <button
           onClick={() => router.push('/settings')}

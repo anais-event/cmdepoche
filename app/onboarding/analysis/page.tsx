@@ -3,149 +3,164 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import BackButton from '@/components/back-button';
-import type { Profile } from '@/lib/supabase';
+import { Loader2, Sparkles } from 'lucide-react';
 
-export default function OnboardingAnalysisPage() {
+// ÉTAPE 4 : « Voilà ce que j'ai compris ».
+// Lit le brand_brain (source unique) avec repli sur profiles (matière du scan existant).
+// L'user vérifie et corrige. Inclut l'analyse de la bio (R9).
+// Fusionne l'ancien écran "refine" : on ne demande QUE le non-déductible, ici, en une étape.
+// Valider écrit le brand_brain (user_confirmed=true) puis mène à l'objectif (R5).
+
+export default function OnboardingConfirmPage() {
   const router = useRouter();
-  const [profile, setProfile] = useState<Partial<Profile> | null>(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [palette, setPalette] = useState<string[]>([]);
+
+  // Champs corrigeables
+  const [brandName, setBrandName] = useState('');
+  const [whatTheySell, setWhatTheySell] = useState('');
+  const [audienceWho, setAudienceWho] = useState('');
+  const [tone, setTone] = useState('');
+  const [pillars, setPillars] = useState('');
+  const [bioText, setBioText] = useState('');
+  const [bioDiagnostic, setBioDiagnostic] = useState('');
 
   useEffect(() => {
-    const loadProfile = async () => {
+    const load = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { router.push('/login'); return; }
+      setUserId(session.user.id);
 
-      const { data } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', session.user.id)
-        .single();
+      const [{ data: brain }, { data: profile }] = await Promise.all([
+        supabase.from('brand_brain').select('*').eq('user_id', session.user.id).single(),
+        supabase.from('profiles').select('*').eq('id', session.user.id).single(),
+      ]);
 
-      setProfile(data);
+      // Le brain prime ; sinon on amorce avec la matière du scan (profiles).
+      setBrandName(brain?.brand_name || profile?.brand_name || '');
+      setWhatTheySell(brain?.what_they_sell || profile?.brand_desc || '');
+      setAudienceWho(brain?.audience?.who || profile?.detected_target || '');
+      setTone(brain?.tone_of_voice || profile?.detected_tone || '');
+      setPillars(
+        Array.isArray(brain?.content_pillars) && brain.content_pillars.length
+          ? brain.content_pillars.map((p: { name: string }) => p.name).join(', ')
+          : Array.isArray(profile?.niches) ? (profile.niches as string[]).join(', ') : ''
+      );
+      setBioText(brain?.bio_text || '');
+      setBioDiagnostic(brain?.bio_diagnostic || '');
+      setPalette(
+        (brain?.visual_identity?.colors as string[]) ||
+        (profile?.color_palette as string[]) ||
+        []
+      );
+
       setLoading(false);
     };
-    loadProfile();
+    load();
   }, [router]);
 
-  if (loading || !profile) {
+  const handleConfirm = async () => {
+    if (!userId) return;
+    setSaving(true);
+
+    const pillarList = pillars.split(',').map((s) => s.trim()).filter(Boolean);
+    const weight = pillarList.length ? Number((1 / pillarList.length).toFixed(2)) : 0;
+
+    const { error } = await supabase.from('brand_brain').upsert(
+      {
+        user_id: userId,
+        brand_name: brandName.trim() || null,
+        what_they_sell: whatTheySell.trim() || null,
+        audience: { who: audienceWho.trim() || undefined },
+        tone_of_voice: tone.trim() || null,
+        content_pillars: pillarList.map((name) => ({ name, weight })),
+        bio_text: bioText.trim() || null,
+        bio_diagnostic: bioDiagnostic.trim() || null,
+        user_confirmed: true,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id' }
+    );
+
+    setSaving(false);
+    if (error) { console.error('confirmBrain:', error); return; }
+    router.push('/onboarding/objective');
+  };
+
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="w-6 h-6 border-2 border-border border-t-terra rounded-full animate-spin" />
+        <Loader2 size={24} className="text-terra animate-spin" />
       </div>
     );
   }
 
-  const palette = (profile.color_palette as string[]) || ['#B87356', '#8FA37A', '#2D2A26', '#FAF8F5', '#EBE6E0'];
-  const formatEng = (profile.format_engagement as { photo: number; carousel: number; reel: number }) || { photo: 35, carousel: 42, reel: 23 };
-  const slots = (profile.optimal_slots as { day: string; time: string }[]) || [
-    { day: 'Lundi', time: '18:30' },
-    { day: 'Mercredi', time: '12:00' },
-    { day: 'Vendredi', time: '19:00' },
-    { day: 'Dimanche', time: '10:00' },
-  ];
-
   return (
     <div className="flex flex-col min-h-screen py-6">
-      <BackButton href="/onboarding" />
+      <div className="flex items-center gap-2 mt-2 mb-1">
+        <Sparkles size={18} className="text-terra" />
+        <h1 className="font-cinzel text-xl font-semibold text-text">Voilà ce que j&apos;ai compris</h1>
+      </div>
+      <p className="text-sm text-sub mb-6">
+        Relis, corrige ce qui est faux. C&apos;est la base de tout ce que je vais te proposer.
+      </p>
 
-      <h1 className="font-cinzel text-xl font-semibold text-text mt-4 mb-2">Analyse de ton univers</h1>
-      <p className="text-sm text-sub mb-6">Voici ce qu&apos;on a détecté sur ton compte</p>
-
-      {/* Section : Profil détecté */}
-      <div className="card mb-4">
-        <h2 className="font-cinzel text-base font-semibold text-text mb-4">Profil détecté</h2>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-bg rounded-input p-3">
-            <p className="text-xs text-sub mb-1">Abonnés</p>
-            <p className="text-lg font-semibold text-text">
-              {profile.followers_count?.toLocaleString('fr-FR') || '—'}
-            </p>
-          </div>
-          <div className="bg-bg rounded-input p-3">
-            <p className="text-xs text-sub mb-1">Niche</p>
-            <p className="text-lg font-semibold text-text">{profile.detected_niche || '—'}</p>
-          </div>
-          <div className="bg-bg rounded-input p-3">
-            <p className="text-xs text-sub mb-1">Ton</p>
-            <p className="text-lg font-semibold text-text">{profile.detected_tone || '—'}</p>
-          </div>
-          <div className="bg-bg rounded-input p-3">
-            <p className="text-xs text-sub mb-1">Cible</p>
-            <p className="text-sm font-medium text-text leading-snug">{profile.detected_target || '—'}</p>
+      {/* Palette détectée (lecture) */}
+      {palette.length > 0 && (
+        <div className="card mb-4">
+          <h2 className="font-cinzel text-sm font-semibold text-text mb-3">Ton univers visuel</h2>
+          <div className="flex gap-2">
+            {palette.slice(0, 6).map((color, i) => (
+              <div key={i} className="flex-1 aspect-square rounded-xl border border-border" style={{ backgroundColor: color }} />
+            ))}
           </div>
         </div>
+      )}
+
+      {/* Compréhension corrigeable */}
+      <div className="card mb-4 space-y-4">
+        <Field label="Ta marque / ton projet" value={brandName} onChange={setBrandName} placeholder="Le nom que tu portes" />
+        <Field label="Ce que tu proposes" value={whatTheySell} onChange={setWhatTheySell} placeholder="Ton offre en une phrase" textarea />
+        <Field label="À qui tu parles" value={audienceWho} onChange={setAudienceWho} placeholder="Ta cible principale" />
+        <Field label="Ta façon de parler" value={tone} onChange={setTone} placeholder="Le ton qui te ressemble" />
+        <Field label="Tes thèmes récurrents" value={pillars} onChange={setPillars} placeholder="Sépare par des virgules" hint="Les sujets sur lesquels tu reviens souvent" />
       </div>
 
-      {/* Section : Palette visuelle */}
-      <div className="card mb-4">
-        <h2 className="font-cinzel text-base font-semibold text-text mb-3">Palette visuelle</h2>
-        <div className="flex gap-2">
-          {palette.map((color, i) => (
-            <div key={i} className="flex flex-col items-center gap-1 flex-1">
-              <div
-                className="w-full aspect-square rounded-xl border border-border"
-                style={{ backgroundColor: color }}
-              />
-              <span className="text-[10px] text-muted uppercase">{color}</span>
-            </div>
-          ))}
-        </div>
+      {/* Bio Instagram (R9) */}
+      <div className="card mb-8 space-y-4">
+        <h2 className="font-cinzel text-sm font-semibold text-text">Ta bio Instagram</h2>
+        <Field label="Texte de ta bio" value={bioText} onChange={setBioText} placeholder="Colle ou corrige ta bio" textarea />
+        <Field label="Ce que ta bio dit de toi" value={bioDiagnostic} onChange={setBioDiagnostic} placeholder="Ce qu'on en comprend, ce qui pourrait être plus clair" textarea hint="On s'en sert pour juger la clarté de ton positionnement" />
       </div>
 
-      {/* Section : Engagement par format */}
-      <div className="card mb-4">
-        <h2 className="font-cinzel text-base font-semibold text-text mb-1">Ce qui marche pour toi</h2>
-        <p className="text-xs text-sub mb-4">Part de ton engagement par format</p>
-        <div className="space-y-3">
-          {[
-            { label: 'Carrousel', value: formatEng.carousel, color: 'bg-terra' },
-            { label: 'Photo', value: formatEng.photo, color: 'bg-sage' },
-            { label: 'Reel', value: formatEng.reel, color: 'bg-text' },
-          ].sort((a, b) => b.value - a.value).map((item) => (
-            <div key={item.label}>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="text-text font-medium">{item.label}</span>
-                <span className="text-sub">{item.value}%</span>
-              </div>
-              <div className="h-2 bg-border-l rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full ${item.color} transition-all`}
-                  style={{ width: `${item.value}%` }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Section : Créneaux optimisés */}
-      <div className="card mb-8">
-        <h2 className="font-cinzel text-base font-semibold text-text mb-3">Créneaux optimisés</h2>
-        <div className="flex flex-wrap gap-2">
-          {slots.map((slot, i) => (
-            <span key={i} className="pill text-xs">
-              {slot.day} {slot.time}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {/* Boutons */}
-      <div className="mt-auto space-y-3">
-        <button
-          onClick={() => router.push('/onboarding/expert')}
-          className="btn-primary"
-        >
-          C&apos;est bien moi →
-        </button>
-        <button
-          onClick={() => router.push('/onboarding/refine')}
-          className="btn-secondary"
-        >
-          Je souhaite affiner / modifier →
+      <div className="mt-auto">
+        <button onClick={handleConfirm} disabled={saving} className="btn-primary flex items-center justify-center gap-2">
+          {saving ? <><Loader2 size={18} className="animate-spin" /> Enregistrement...</> : "C'est juste, on continue →"}
         </button>
       </div>
+    </div>
+  );
+}
+
+function Field({ label, value, onChange, placeholder, textarea, hint }: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  textarea?: boolean;
+  hint?: string;
+}) {
+  return (
+    <div>
+      <label className="text-sm font-medium text-text mb-1.5 block">{label}</label>
+      {textarea ? (
+        <textarea value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} rows={2} className="input min-h-[64px] resize-none" />
+      ) : (
+        <input type="text" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className="input" />
+      )}
+      {hint && <p className="text-xs text-muted mt-1">{hint}</p>}
     </div>
   );
 }

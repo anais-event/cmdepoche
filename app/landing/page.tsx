@@ -72,7 +72,7 @@ export default function LandingPage() {
           Pas un planning.
         </h1>
         <p className="text-lg text-sub max-w-xl mx-auto mb-10 leading-relaxed">
-          Dis-nous qui tu es. En 3 minutes, CM de Poche génère ta semaine de posts — légendes, hashtags, horaires — prête à publier. À ta voix.
+          Tu as déjà la matière : tes photos, tes vidéos. CM de Poche comprend ton compte, s&apos;occupe de savoir quoi en faire et prépare ta semaine, à ta voix.
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Link href="/login" className="px-8 py-3.5 rounded-pill bg-terra text-white font-semibold hover:opacity-90 transition-opacity">
@@ -180,8 +180,8 @@ export default function LandingPage() {
         </div>
         <div className="flex flex-col gap-8">
           {[
-            { n: '01', title: 'Décris-toi', desc: 'Ta niche, ton style, ton objectif. Tu fais ça une seule fois.', note: '2 min' },
-            { n: '02', title: 'Importe tes visuels', desc: 'Glisse tes photos, on les associe aux posts automatiquement.', note: '1 min' },
+            { n: '01', title: 'Connecte ou décris ton compte', desc: 'Instagram, ou un simple pseudo. On analyse ta marque, ta voix, ta bio. Une seule fois.', note: '2 min' },
+            { n: '02', title: 'Ajoute tes contenus', desc: 'Tes photos et vidéos sont notre matière première. On sait quoi en faire.', note: '1 min' },
             { n: '03', title: 'Reçois ta semaine', desc: 'Légendes à ta voix, hashtags stratégiques, horaires optimaux, formats variés. Tout est prêt.', note: '47s' },
             { n: '04', title: 'Valide et programme', desc: 'Modifie si tu veux, puis programme. CM de Poche publie au bon moment.', note: '1 min' },
           ].map((step) => (
@@ -250,7 +250,7 @@ export default function LandingPage() {
             { title: 'Hashtags stratégiques', desc: 'Mix automatique : gros, moyens, niche. La bonne combinaison pour maximiser ta portée.' },
             { title: 'Horaires optimaux', desc: 'Publie quand ton audience est active. Créneaux calculés par format et par jour.' },
             { title: 'Analyse de profil', desc: 'Comprends ce qui marche. Engagement, formats, audience. Données réelles.' },
-            { title: 'Mobile-first', desc: 'Conçu pour ton téléphone. Crée ta semaine depuis le canapé ou entre deux rendez-vous.' },
+            { title: 'Pensé pour le desktop', desc: 'Analyse, organisation, stratégie : le confort d\'un vrai poste de travail. Le mobile reste là pour valider et suivre.' },
           ].map((f) => (
             <div key={f.title} className="bg-card rounded-card p-6 border border-border">
               <h3 className="font-semibold text-text mb-2">{f.title}</h3>

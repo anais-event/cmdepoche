@@ -25,9 +25,15 @@ export default function LoginPage() {
         if (error) throw error;
         router.push('/onboarding');
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        router.push('/onboarding');
+        // Retour d'un user existant : on ne le renvoie pas dans l'onboarding s'il l'a fini.
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('onboarding_completed')
+          .eq('id', data.user.id)
+          .single();
+        router.push(profile?.onboarding_completed ? '/planning' : '/onboarding');
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
