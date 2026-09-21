@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAccessToken, getInstagramUserId, fetchProfileInfo } from '@/lib/instagram';
+import { createClient } from '@supabase/supabase-js';
+
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
 
 export async function GET(request: NextRequest) {
   const userId = request.nextUrl.searchParams.get('user_id');
@@ -8,8 +16,28 @@ export async function GET(request: NextRequest) {
   }
 
   const accessToken = await getAccessToken(userId);
+
   if (!accessToken) {
-    return NextResponse.json({ error: 'Instagram non connecté', connected: false }, { status: 401 });
+    const supabase = getSupabase();
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('insta_handle, detected_niche')
+      .eq('id', userId)
+      .single();
+
+    const handle = profile?.insta_handle || 'mon.compte';
+
+    return NextResponse.json({
+      connected: false,
+      demo: true,
+      username: handle,
+      name: handle.replace(/\./g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+      biography: `Créateur·rice passionné·e ✨ ${profile?.detected_niche || 'Lifestyle'} · Contenus authentiques`,
+      followers_count: 2847,
+      follows_count: 463,
+      media_count: 187,
+      profile_picture_url: '',
+    });
   }
 
   const igUserId = await getInstagramUserId(userId);
