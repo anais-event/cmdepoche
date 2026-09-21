@@ -7,8 +7,8 @@ import BottomNav from '@/components/bottom-nav';
 import {
   Eye, Heart, UserPlus, MousePointer, Loader2,
   Instagram, RefreshCw,
-  MessageCircle, Bookmark, Share2, Image, Film, Copy,
-  LinkIcon, Sparkles, ThumbsUp, ThumbsDown,
+  MessageCircle, Image, Film, Copy,
+  ThumbsUp, ThumbsDown, Info,
 } from 'lucide-react';
 
 type IGProfile = {
@@ -68,13 +68,13 @@ function timeAgo(dateStr: string): string {
 export default function DashboardPage() {
   const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
-  const [connected, setConnected] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [profile, setProfile] = useState<IGProfile | null>(null);
   const [insights, setInsights] = useState<IGInsights | null>(null);
   const [media, setMedia] = useState<IGMediaItem[]>([]);
   const [period, setPeriod] = useState<'day' | 'week' | 'days_28'>('days_28');
+  const [isDemo, setIsDemo] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [brain, setBrain] = useState<any>(null);
 
@@ -87,20 +87,20 @@ export default function DashboardPage() {
 
     if (profileRes.ok) {
       const data = await profileRes.json();
-      if (data.connected) {
-        setProfile(data);
-        setConnected(true);
-      }
+      setProfile(data);
+      if (data.demo) setIsDemo(true);
     }
 
     if (insightsRes.ok) {
       const data = await insightsRes.json();
       setInsights(data.insights);
+      if (data.demo) setIsDemo(true);
     }
 
     if (mediaRes.ok) {
       const data = await mediaRes.json();
       setMedia(data.media || []);
+      if (data.demo) setIsDemo(true);
     }
   }, []);
 
@@ -117,18 +117,7 @@ export default function DashboardPage() {
         .single();
       setBrain(b);
 
-      // Check if connected first
-      const { data: p } = await supabase
-        .from('profiles')
-        .select('instagram_access_token')
-        .eq('id', session.user.id)
-        .single();
-
-      if (p?.instagram_access_token) {
-        setConnected(true);
-        await fetchData(session.user.id, period);
-      }
-
+      await fetchData(session.user.id, period);
       setLoading(false);
     };
     init();
@@ -149,12 +138,10 @@ export default function DashboardPage() {
     setRefreshing(false);
   };
 
-  // Sort posts by engagement for ranking
   const topPosts = [...media]
     .sort((a, b) => (b.like_count + b.comments_count) - (a.like_count + a.comments_count))
     .slice(0, 5);
 
-  // Calculate engagement rate
   const avgEngagement = media.length > 0 && profile
     ? media.reduce((sum, p) => sum + p.like_count + p.comments_count, 0) / media.length / Math.max(profile.followers_count, 1) * 100
     : 0;
@@ -163,39 +150,6 @@ export default function DashboardPage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 size={24} className="text-terra animate-spin" />
-      </div>
-    );
-  }
-
-  // Not connected state
-  if (!connected) {
-    return (
-      <div className="flex flex-col min-h-screen py-6 pb-24">
-        <h1 className="font-cinzel text-xl font-semibold text-text mb-2">Résultats</h1>
-        <p className="text-sm text-sub mb-6">Ce que tu as fait, ce qui marche, ce que j&apos;en apprends.</p>
-
-        <LearnedCard brain={brain} />
-
-        <div className="card text-center py-12">
-          <div className="w-16 h-16 rounded-full bg-terra-bg mx-auto mb-4 flex items-center justify-center">
-            <Instagram size={28} className="text-terra" />
-          </div>
-          <h2 className="font-cinzel text-lg font-semibold text-text mb-2">
-            Connecte ton Instagram
-          </h2>
-          <p className="text-sm text-sub mb-6 max-w-xs mx-auto">
-            Synchronise ton compte pour voir tes vraies statistiques, tes meilleurs posts et ton taux d&apos;engagement
-          </p>
-          <a
-            href={`/api/auth/instagram?user_id=${userId}`}
-            className="inline-flex items-center gap-2 bg-terra text-white font-semibold px-6 py-3 rounded-pill"
-          >
-            <Instagram size={18} />
-            Connecter Instagram
-          </a>
-        </div>
-
-        <BottomNav />
       </div>
     );
   }
@@ -213,6 +167,16 @@ export default function DashboardPage() {
           <RefreshCw size={18} className={refreshing ? 'animate-spin' : ''} />
         </button>
       </div>
+
+      {/* Demo banner */}
+      {isDemo && (
+        <div className="card mb-4 flex gap-3 items-start bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800">
+          <Info size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-amber-800 dark:text-amber-200 leading-relaxed">
+            Données de démonstration. Connecte ton Instagram dans les réglages pour voir tes vraies stats.
+          </p>
+        </div>
+      )}
 
       <LearnedCard brain={brain} />
 
@@ -268,92 +232,34 @@ export default function DashboardPage() {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-3 mb-6">
-        <KpiCard
-          icon={Eye}
-          label="Impressions"
-          value={insights?.impressions ?? 0}
-        />
-        <KpiCard
-          icon={UserPlus}
-          label="Abonnés"
-          value={insights?.follower_count ?? profile?.followers_count ?? 0}
-        />
-        <KpiCard
-          icon={MousePointer}
-          label="Visites profil"
-          value={insights?.profile_views ?? 0}
-        />
-        <KpiCard
-          icon={Heart}
-          label="Taux engagement"
-          value={avgEngagement}
-          suffix="%"
-          decimals={2}
-        />
+        <KpiCard icon={Eye} label="Impressions" value={insights?.impressions ?? 0} />
+        <KpiCard icon={UserPlus} label="Abonnés" value={insights?.follower_count ?? profile?.followers_count ?? 0} />
+        <KpiCard icon={MousePointer} label="Visites profil" value={insights?.profile_views ?? 0} />
+        <KpiCard icon={Heart} label="Taux engagement" value={avgEngagement} suffix="%" decimals={2} />
       </div>
-
-      {/* Reach & Website */}
-      {insights && (insights.reach > 0 || insights.website_clicks > 0) && (
-        <div className="flex gap-3 mb-6">
-          {insights.reach > 0 && (
-            <div className="card flex-1 flex items-center gap-3">
-              <Eye size={16} className="text-sage flex-shrink-0" />
-              <div>
-                <p className="text-lg font-semibold text-text">{formatNumber(insights.reach)}</p>
-                <p className="text-[10px] text-muted">Portée</p>
-              </div>
-            </div>
-          )}
-          {insights.website_clicks > 0 && (
-            <div className="card flex-1 flex items-center gap-3">
-              <LinkIcon size={16} className="text-terra flex-shrink-0" />
-              <div>
-                <p className="text-lg font-semibold text-text">{formatNumber(insights.website_clicks)}</p>
-                <p className="text-[10px] text-muted">Clics site</p>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Top Posts Ranking */}
       {topPosts.length > 0 && (
         <div className="card mb-4">
-          <h2 className="font-cinzel text-base font-semibold text-text mb-3">
-            Meilleurs posts
-          </h2>
+          <h2 className="font-cinzel text-base font-semibold text-text mb-3">Meilleurs posts</h2>
           <div className="space-y-3">
             {topPosts.map((post, i) => {
               const FormatIcon = FORMAT_ICONS[post.media_type] || Image;
               const engagement = post.like_count + post.comments_count;
               return (
-                <a
-                  key={post.id}
-                  href={post.permalink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 group"
-                >
+                <div key={post.id} className="flex items-center gap-3">
                   <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
                     i === 0 ? 'bg-terra text-white' : i === 1 ? 'bg-sage text-white' : 'bg-border-l text-sub'
                   }`}>
                     {i + 1}
                   </span>
 
-                  {post.media_url || post.thumbnail_url ? (
-                    <img
-                      src={post.thumbnail_url || post.media_url}
-                      alt=""
-                      className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 rounded-lg bg-border-l flex items-center justify-center flex-shrink-0">
-                      <FormatIcon size={16} className="text-muted" />
-                    </div>
-                  )}
+                  <div className="w-10 h-10 rounded-lg bg-border-l flex items-center justify-center flex-shrink-0">
+                    <FormatIcon size={16} className="text-muted" />
+                  </div>
 
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-text line-clamp-1 group-hover:text-terra transition-colors">
+                    <p className="text-sm text-text line-clamp-1">
                       {post.caption || 'Sans légende'}
                     </p>
                     <div className="flex items-center gap-3 text-[10px] text-muted mt-0.5">
@@ -370,102 +276,10 @@ export default function DashboardPage() {
                   <span className="text-xs font-semibold text-terra flex-shrink-0">
                     {formatNumber(engagement)}
                   </span>
-                </a>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Recent Posts Grid */}
-      {media.length > 0 && (
-        <div className="mb-6">
-          <h2 className="font-cinzel text-base font-semibold text-text mb-3">
-            Posts récents
-          </h2>
-          <div className="grid grid-cols-3 gap-1.5 rounded-card overflow-hidden">
-            {media.slice(0, 9).map((post) => {
-              const FormatIcon = FORMAT_ICONS[post.media_type] || Image;
-              return (
-                <a
-                  key={post.id}
-                  href={post.permalink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="relative aspect-square group"
-                >
-                  {post.media_url || post.thumbnail_url ? (
-                    <img
-                      src={post.thumbnail_url || post.media_url}
-                      alt=""
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-border-l flex items-center justify-center">
-                      <FormatIcon size={20} className="text-muted" />
-                    </div>
-                  )}
-
-                  {/* Format badge */}
-                  {post.media_type !== 'IMAGE' && (
-                    <div className="absolute top-1.5 right-1.5">
-                      <FormatIcon size={14} className="text-white drop-shadow-md" />
-                    </div>
-                  )}
-
-                  {/* Hover overlay */}
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 text-white text-xs font-medium">
-                    <span className="flex items-center gap-1">
-                      <Heart size={12} /> {formatNumber(post.like_count)}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <MessageCircle size={12} /> {formatNumber(post.comments_count)}
-                    </span>
-                  </div>
-                </a>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Post Insights Detail (if insights available) */}
-      {media.length > 0 && media.some(m => Object.keys(m.insights).length > 0) && (
-        <div className="card mb-6">
-          <h2 className="font-cinzel text-base font-semibold text-text mb-3">
-            Insights des posts
-          </h2>
-          <div className="space-y-3">
-            {media.filter(m => Object.keys(m.insights).length > 0).slice(0, 5).map((post) => (
-              <div key={post.id} className="border-b border-border-l last:border-0 pb-3 last:pb-0">
-                <p className="text-xs text-text line-clamp-1 mb-2">
-                  {post.caption || 'Sans légende'}
-                </p>
-                <div className="flex flex-wrap gap-x-4 gap-y-1">
-                  {post.insights.reach != null && (
-                    <InsightPill icon={Eye} label="Portée" value={post.insights.reach} />
-                  )}
-                  {post.insights.impressions != null && (
-                    <InsightPill icon={Eye} label="Impr." value={post.insights.impressions} />
-                  )}
-                  {post.insights.saved != null && (
-                    <InsightPill icon={Bookmark} label="Saves" value={post.insights.saved} />
-                  )}
-                  {post.insights.shares != null && (
-                    <InsightPill icon={Share2} label="Partages" value={post.insights.shares} />
-                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
-        </div>
-      )}
-
-      {/* Empty state */}
-      {media.length === 0 && (
-        <div className="card text-center py-8 mb-6">
-          <p className="text-sm text-sub mb-2">Chargement des données...</p>
-          <p className="text-xs text-muted">Appuie sur rafraîchir pour synchroniser tes posts Instagram</p>
         </div>
       )}
 
@@ -474,8 +288,6 @@ export default function DashboardPage() {
   );
 }
 
-// « Ce que j'ai appris » (R8) — restitution de l'apprentissage.
-// Lit brand_brain.what_works / what_fails, réécrit après chaque analyse.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function LearnedCard({ brain }: { brain: any }) {
   const works: string[] = [
@@ -488,43 +300,34 @@ function LearnedCard({ brain }: { brain: any }) {
     ...(brain?.what_fails?.topics || []),
   ].filter(Boolean);
 
+  if (works.length === 0 && fails.length === 0) return null;
+
   return (
-    <div className="card mb-6">
-      <div className="flex items-center gap-2 mb-3">
-        <Sparkles size={16} className="text-terra" />
-        <h2 className="font-cinzel text-base font-semibold text-text">Ce que j&apos;ai appris</h2>
+    <div className="card mb-4">
+      <div className="space-y-3">
+        {works.length > 0 && (
+          <div>
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <ThumbsUp size={12} className="text-sage" />
+              <span className="text-[10px] font-bold text-sage uppercase">Marche</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {works.map((w, i) => <span key={i} className="pill text-xs">{w}</span>)}
+            </div>
+          </div>
+        )}
+        {fails.length > 0 && (
+          <div>
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <ThumbsDown size={12} className="text-red-400" />
+              <span className="text-[10px] font-bold text-red-400 uppercase">Marche moins</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {fails.map((w, i) => <span key={i} className="pill text-xs">{w}</span>)}
+            </div>
+          </div>
+        )}
       </div>
-      {works.length === 0 && fails.length === 0 ? (
-        <p className="text-sm text-sub leading-relaxed">
-          Pas encore assez de recul. Dès que tes premiers contenus tournent, je te dirai ici ce qui marche
-          pour toi, ce qui marche moins, et ce que j&apos;en déduis pour la suite.
-        </p>
-      ) : (
-        <div className="space-y-3">
-          {works.length > 0 && (
-            <div>
-              <div className="flex items-center gap-1.5 mb-1.5">
-                <ThumbsUp size={13} className="text-sage" />
-                <span className="text-xs font-semibold text-sage uppercase">Ce qui marche</span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {works.map((w, i) => <span key={i} className="pill text-xs">{w}</span>)}
-              </div>
-            </div>
-          )}
-          {fails.length > 0 && (
-            <div>
-              <div className="flex items-center gap-1.5 mb-1.5">
-                <ThumbsDown size={13} className="text-red-400" />
-                <span className="text-xs font-semibold text-red-400 uppercase">Ce qui marche moins</span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {fails.map((w, i) => <span key={i} className="pill text-xs">{w}</span>)}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }
@@ -548,18 +351,5 @@ function KpiCard({ icon: Icon, label, value, suffix, decimals }: {
       </div>
       <p className="text-xl font-semibold text-text">{formatted}</p>
     </div>
-  );
-}
-
-function InsightPill({ icon: Icon, label, value }: {
-  icon: typeof Eye;
-  label: string;
-  value: number;
-}) {
-  return (
-    <span className="flex items-center gap-1 text-[10px] text-sub">
-      <Icon size={10} className="text-muted" />
-      {label}: <span className="font-medium text-text">{formatNumber(value)}</span>
-    </span>
   );
 }

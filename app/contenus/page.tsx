@@ -4,19 +4,18 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import BottomNav from '@/components/bottom-nav';
-import { ImagePlus, X, Loader2, Film, Image as ImageIcon, CalendarClock, CheckCircle2 } from 'lucide-react';
+import { Plus, Loader2, Film, Image as ImageIcon, Check } from 'lucide-react';
 
-// Onglet CONTENUS (R2) — la bibliothèque personnelle, brique centrale.
-// Ce n'est PAS un écran d'import temporaire : tes photos et vidéos y vivent en permanence.
-// « Tes photos et vidéos sont notre matière première. CM de Poche s'occupe de savoir quoi en faire. »
+type ContentStatus = 'available' | 'selected' | 'scheduled' | 'published';
 
 type LibraryItem = {
   name: string;
   url: string;
   isVideo: boolean;
+  status: ContentStatus;
 };
 
-type Tab = 'available' | 'scheduled' | 'published';
+type Tab = 'all' | 'selected' | 'scheduled' | 'published';
 
 export default function ContenusPage() {
   const router = useRouter();
@@ -25,15 +24,31 @@ export default function ContenusPage() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [dragging, setDragging] = useState(false);
-  const [tab, setTab] = useState<Tab>('available');
+  const [tab, setTab] = useState<Tab>('all');
 
   const loadLibrary = useCallback(async (uid: string) => {
-    const { data } = await supabase.storage.from('visuals').list(uid, { limit: 100, sortBy: { column: 'created_at', order: 'desc' } });
-    const mapped: LibraryItem[] = (data || [])
+    const { data: files } = await supabase.storage
+      .from('visuals')
+      .list(uid, { limit: 200, sortBy: { column: 'created_at', order: 'desc' } });
+
+    const { data: statuses } = await supabase
+      .from('content_status')
+      .select('file_name, status')
+      .eq('user_id', uid);
+
+    const statusMap = new Map<string, ContentStatus>();
+    (statuses || []).forEach(s => statusMap.set(s.file_name, s.status as ContentStatus));
+
+    const mapped: LibraryItem[] = (files || [])
       .filter((f) => f.name && !f.name.startsWith('.'))
       .map((f) => {
         const { data: { publicUrl } } = supabase.storage.from('visuals').getPublicUrl(`${uid}/${f.name}`);
-        return { name: f.name, url: publicUrl, isVideo: /\.(mp4|mov|webm|m4v)$/i.test(f.name) };
+        return {
+          name: f.name,
+          url: publicUrl,
+          isVideo: /\.(mp4|mov|webm|m4v)$/i.test(f.name),
+          status: statusMap.get(f.name) || 'available',
+        };
       });
     setItems(mapped);
   }, []);
@@ -49,6 +64,21 @@ export default function ContenusPage() {
     init();
   }, [router, loadLibrary]);
 
+  const toggleSelect = async (item: LibraryItem) => {
+    if (!userId) return;
+    if (item.status === 'scheduled' || item.status === 'published') return;
+
+    const newStatus: ContentStatus = item.status === 'selected' ? 'available' : 'selected';
+    setItems(prev => prev.map(i => i.name === item.name ? { ...i, status: newStatus } : i));
+
+    await supabase.from('content_status').upsert({
+      user_id: userId,
+      file_name: item.name,
+      status: newStatus,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id,file_name' });
+  };
+
   const addFiles = async (files: FileList | File[]) => {
     if (!userId) return;
     const arr = Array.from(files).filter((f) => f.type.startsWith('image/') || f.type.startsWith('video/'));
@@ -58,8 +88,7 @@ export default function ContenusPage() {
       for (const file of arr) {
         const ext = file.name.split('.').pop();
         const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-        const { error } = await supabase.storage.from('visuals').upload(path, file);
-        if (error) throw error;
+        await supabase.storage.from('visuals').upload(path, file);
       }
       await loadLibrary(userId);
     } catch (err) {
@@ -69,97 +98,96 @@ export default function ContenusPage() {
     }
   };
 
-  const removeItem = async (name: string) => {
-    if (!userId) return;
-    await supabase.storage.from('visuals').remove([`${userId}/${name}`]);
-    setItems((prev) => prev.filter((i) => i.name !== name));
-  };
+  const filtered = items.filter(i => {
+    if (tab === 'all') return true;
+    if (tab === 'selected') return i.status === 'selected';
+    return i.status === tab;
+  });
 
-  const photoCount = items.filter((i) => !i.isVideo).length;
-  const videoCount = items.length - photoCount;
+  const selectedCount = items.filter(i => i.status === 'selected').length;
+  const totalCount = items.length;
 
   return (
     <div className="flex flex-col min-h-screen py-6 pb-24">
-      <h1 className="font-cinzel text-xl font-semibold text-text mb-1">Contenus</h1>
-      <p className="text-sm text-sub mb-5 max-w-md">
-        Tes photos et vidéos sont notre matière première. Dépose-les ici une fois — CM de Poche s&apos;occupe de savoir quoi en faire.
-      </p>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="font-cinzel text-xl font-semibold text-text">Contenus</h1>
+        <span className="text-xs text-muted">{totalCount} disponible{totalCount !== 1 ? 's' : ''}</span>
+      </div>
 
-      {/* Zone d'ajout — toujours disponible */}
+      {/* Upload */}
       <label
         onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         onDrop={(e) => { e.preventDefault(); setDragging(false); if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files); }}
-        className={`flex flex-col items-center justify-center gap-2 py-8 rounded-card border-2 border-dashed cursor-pointer transition-colors mb-5 ${
+        className={`flex items-center justify-center gap-2 py-4 rounded-card border-2 border-dashed cursor-pointer transition-colors mb-4 ${
           dragging ? 'border-terra bg-terra-bg' : 'border-border active:border-terra'
         }`}
       >
-        {uploading ? <Loader2 size={28} className="text-terra animate-spin" /> : <ImagePlus size={28} className={dragging ? 'text-terra' : 'text-muted'} />}
-        <span className="text-sm font-medium text-text">{uploading ? 'Ajout en cours...' : 'Ajouter des photos ou vidéos'}</span>
-        <span className="text-xs text-muted hidden md:block">Glisse-dépose ou clique pour parcourir</span>
+        {uploading ? <Loader2 size={18} className="text-terra animate-spin" /> : <Plus size={18} className={dragging ? 'text-terra' : 'text-muted'} />}
+        <span className="text-sm text-text">{uploading ? 'Ajout...' : 'Ajouter'}</span>
         <input type="file" accept="image/*,video/*" multiple onChange={(e) => e.target.files && addFiles(e.target.files)} className="hidden" />
       </label>
 
-      {/* Filtres de statut */}
+      {/* Tabs */}
       <div className="flex gap-2 mb-4">
         {([
-          { value: 'available' as const, label: 'Disponibles' },
-          { value: 'scheduled' as const, label: 'Programmés' },
-          { value: 'published' as const, label: 'Publiés' },
-        ]).map((t) => (
-          <button key={t.value} onClick={() => setTab(t.value)} className={`pill flex-1 text-xs ${tab === t.value ? 'pill-active' : ''}`}>
-            {t.label}
+          ['all', 'Tous'] as const,
+          ['selected', `Sélectionnés${selectedCount > 0 ? ` (${selectedCount})` : ''}`] as const,
+          ['scheduled', 'Programmés'] as const,
+          ['published', 'Publiés'] as const,
+        ]).map(([value, label]) => (
+          <button key={value} onClick={() => setTab(value)} className={`pill text-xs ${tab === value ? 'pill-active' : ''}`}>
+            {label}
           </button>
         ))}
       </div>
 
       {loading ? (
         <div className="flex items-center justify-center flex-1"><Loader2 size={24} className="text-terra animate-spin" /></div>
-      ) : tab === 'available' ? (
-        items.length === 0 ? (
-          <div className="flex flex-col items-center justify-center flex-1 gap-3 py-12 text-center">
-            <div className="w-14 h-14 rounded-full bg-terra-bg flex items-center justify-center">
-              <ImageIcon size={24} className="text-terra" />
-            </div>
-            <p className="text-sm text-sub max-w-[240px]">Ta bibliothèque est vide. Dépose tes premiers visuels pour qu&apos;on ait de la matière.</p>
+      ) : filtered.length === 0 ? (
+        <div className="flex flex-col items-center justify-center flex-1 gap-2 py-12">
+          <ImageIcon size={28} className="text-muted" />
+          <p className="text-sm text-sub">Rien ici.</p>
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-3 md:grid-cols-4 gap-2 mb-6">
+            {filtered.map((v) => (
+              <button
+                key={v.name}
+                onClick={() => toggleSelect(v)}
+                className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-colors ${
+                  v.status === 'selected' ? 'border-terra' : 'border-transparent'
+                }`}
+              >
+                {v.isVideo ? (
+                  <div className="w-full h-full bg-border-l flex items-center justify-center"><Film size={22} className="text-sub" /></div>
+                ) : (
+                  <img src={v.url} alt="" className="w-full h-full object-cover" />
+                )}
+                {v.status === 'selected' && (
+                  <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-terra flex items-center justify-center">
+                    <Check size={12} className="text-white" />
+                  </div>
+                )}
+                {v.status === 'scheduled' && (
+                  <div className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[9px] text-center py-0.5">Programmé</div>
+                )}
+                {v.status === 'published' && (
+                  <div className="absolute bottom-0 inset-x-0 bg-sage/80 text-white text-[9px] text-center py-0.5">Publié</div>
+                )}
+              </button>
+            ))}
           </div>
-        ) : (
-          <>
-            <div className="flex items-center gap-3 text-xs text-sub mb-3">
-              <span className="flex items-center gap-1"><ImageIcon size={13} /> {photoCount} photo{photoCount !== 1 ? 's' : ''}</span>
-              {videoCount > 0 && <span className="flex items-center gap-1"><Film size={13} /> {videoCount} vidéo{videoCount !== 1 ? 's' : ''}</span>}
-            </div>
-            <div className="grid grid-cols-3 md:grid-cols-4 gap-2 md:gap-3 mb-6">
-              {items.map((v) => (
-                <div key={v.name} className="relative aspect-square rounded-input overflow-hidden border border-border group">
-                  {v.isVideo ? (
-                    <div className="w-full h-full bg-border-l flex items-center justify-center"><Film size={24} className="text-sub" /></div>
-                  ) : (
-                    <img src={v.url} alt="" className="w-full h-full object-cover" />
-                  )}
-                  <button onClick={() => removeItem(v.name)} className="absolute top-1 right-1 w-6 h-6 rounded-full bg-text/70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <X size={12} className="text-white" />
-                  </button>
-                </div>
-              ))}
-            </div>
+
+          {selectedCount > 0 && (
             <div className="mt-auto">
               <button onClick={() => router.push('/planning')} className="btn-primary">
-                Préparer ma semaine avec ces contenus →
+                Préparer la semaine ({selectedCount}) →
               </button>
             </div>
-          </>
-        )
-      ) : (
-        <div className="flex flex-col items-center justify-center flex-1 gap-3 py-12 text-center">
-          {tab === 'scheduled' ? <CalendarClock size={28} className="text-muted" /> : <CheckCircle2 size={28} className="text-muted" />}
-          <p className="text-sm text-sub max-w-[260px]">
-            {tab === 'scheduled'
-              ? 'Les contenus que tu programmes depuis l\'onglet Semaine apparaîtront ici.'
-              : 'Une fois publiés, tes contenus se rangent ici avec leurs performances.'}
-          </p>
-          <button onClick={() => router.push('/planning')} className="text-xs text-terra font-medium">Aller à ma semaine →</button>
-        </div>
+          )}
+        </>
       )}
 
       <BottomNav />

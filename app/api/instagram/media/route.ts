@@ -9,6 +9,44 @@ function getSupabaseAdmin() {
   );
 }
 
+function generateDemoMedia() {
+  const now = Date.now();
+  const day = 86400000;
+
+  const posts = [
+    { type: 'CAROUSEL_ALBUM', caption: 'Les 5 erreurs qui plombent ta bio Instagram (swipe →)', likes: 142, comments: 28 },
+    { type: 'IMAGE', caption: 'On parle pas assez de ça : la régularité bat la perfection. Toujours.', likes: 98, comments: 15 },
+    { type: 'VIDEO', caption: 'Comment je prépare mes contenus pour la semaine en 1h chrono 🎬', likes: 231, comments: 42 },
+    { type: 'IMAGE', caption: 'Coulisses du shooting de la semaine. Le naturel, c\'est tout un travail.', likes: 76, comments: 9 },
+    { type: 'CAROUSEL_ALBUM', caption: 'Avant / Après : ce que 3 mois de stratégie de contenu peuvent changer', likes: 189, comments: 34 },
+    { type: 'VIDEO', caption: 'Ma routine matinale création de contenu ☕️', likes: 167, comments: 22 },
+    { type: 'IMAGE', caption: 'Nouveau setup ! Minimaliste mais efficace.', likes: 54, comments: 7 },
+    { type: 'CAROUSEL_ALBUM', caption: 'Les 3 formats qui marchent le mieux pour moi en ce moment', likes: 203, comments: 31 },
+    { type: 'IMAGE', caption: 'Simplicité. Mon mot d\'ordre cette saison.', likes: 112, comments: 13 },
+    { type: 'VIDEO', caption: 'Répondre à vos questions sur la création de contenu 💬', likes: 145, comments: 38 },
+    { type: 'IMAGE', caption: 'Palette d\'automne 🍂 Quel est votre combo préféré ?', likes: 87, comments: 19 },
+    { type: 'CAROUSEL_ALBUM', caption: 'Guide : comment trouver ta niche sans te limiter', likes: 256, comments: 47 },
+  ];
+
+  return posts.map((p, i) => ({
+    id: `demo_${i + 1}`,
+    media_type: p.type as 'IMAGE' | 'VIDEO' | 'CAROUSEL_ALBUM',
+    media_url: '',
+    thumbnail_url: '',
+    caption: p.caption,
+    permalink: '#',
+    like_count: p.likes,
+    comments_count: p.comments,
+    timestamp: new Date(now - (i + 1) * day * 2.5).toISOString(),
+    insights: {
+      impressions: p.likes * 12 + p.comments * 8,
+      reach: p.likes * 8 + p.comments * 5,
+      saved: Math.round(p.likes * 0.15),
+      shares: Math.round(p.comments * 0.6),
+    },
+  }));
+}
+
 export async function GET(request: NextRequest) {
   const userId = request.nextUrl.searchParams.get('user_id');
   if (!userId) {
@@ -16,8 +54,16 @@ export async function GET(request: NextRequest) {
   }
 
   const accessToken = await getAccessToken(userId);
+
   if (!accessToken) {
-    return NextResponse.json({ error: 'Instagram non connecté' }, { status: 401 });
+    const media = generateDemoMedia();
+    const limit = parseInt(request.nextUrl.searchParams.get('limit') || '12');
+    return NextResponse.json({
+      demo: true,
+      media: media.slice(0, limit),
+      total: media.length,
+      avg_engagement: 127,
+    });
   }
 
   const igUserId = await getInstagramUserId(userId);
@@ -33,7 +79,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ media: [], message: 'Aucun post trouvé' });
     }
 
-    // Fetch insights for each post + save to DB
     const supabase = getSupabaseAdmin();
     const enrichedMedia = await Promise.all(
       media.map(async (post) => {
@@ -42,7 +87,6 @@ export async function GET(request: NextRequest) {
       })
     );
 
-    // Upsert to cache table
     const rows = enrichedMedia.map((post) => ({
       user_id: userId,
       ig_media_id: post.id,
@@ -62,7 +106,6 @@ export async function GET(request: NextRequest) {
       .from('instagram_media')
       .upsert(rows, { onConflict: 'ig_media_id' });
 
-    // Also update followers_count on profile
     const totalEngagement = enrichedMedia.reduce(
       (sum, p) => sum + (p.like_count || 0) + (p.comments_count || 0), 0
     );

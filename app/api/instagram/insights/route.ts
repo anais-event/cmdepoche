@@ -9,15 +9,28 @@ function getSupabaseAdmin() {
   );
 }
 
+const DEMO_INSIGHTS: Record<string, { impressions: number; reach: number; profile_views: number; website_clicks: number; follower_count: number }> = {
+  day: { impressions: 342, reach: 289, profile_views: 18, website_clicks: 4, follower_count: 2847 },
+  week: { impressions: 2_180, reach: 1_740, profile_views: 94, website_clicks: 23, follower_count: 2847 },
+  days_28: { impressions: 8_920, reach: 6_350, profile_views: 380, website_clicks: 87, follower_count: 2847 },
+};
+
 export async function GET(request: NextRequest) {
   const userId = request.nextUrl.searchParams.get('user_id');
   if (!userId) {
     return NextResponse.json({ error: 'user_id requis' }, { status: 400 });
   }
 
+  const period = (request.nextUrl.searchParams.get('period') || 'day') as 'day' | 'week' | 'days_28';
   const accessToken = await getAccessToken(userId);
+
   if (!accessToken) {
-    return NextResponse.json({ error: 'Instagram non connecté' }, { status: 401 });
+    return NextResponse.json({
+      demo: true,
+      profile: null,
+      insights: { period, ...DEMO_INSIGHTS[period] },
+      fetched_at: new Date().toISOString(),
+    });
   }
 
   const igUserId = await getInstagramUserId(userId);
@@ -26,8 +39,6 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const period = (request.nextUrl.searchParams.get('period') || 'day') as 'day' | 'week' | 'days_28';
-
     const [insights, profile] = await Promise.all([
       fetchAccountInsights(igUserId, accessToken, period),
       fetchProfileInfo(igUserId, accessToken),
@@ -35,7 +46,6 @@ export async function GET(request: NextRequest) {
 
     const supabase = getSupabaseAdmin();
 
-    // Save insights snapshot
     const today = new Date().toISOString().split('T')[0];
     await supabase.from('instagram_account_insights').upsert({
       user_id: userId,
@@ -49,7 +59,6 @@ export async function GET(request: NextRequest) {
       fetched_at: new Date().toISOString(),
     }, { onConflict: 'user_id,period,date' });
 
-    // Update profile with latest follower count
     if (profile) {
       await supabase.from('profiles').update({
         followers_count: profile.followers_count || insights.follower_count,
@@ -67,10 +76,7 @@ export async function GET(request: NextRequest) {
         media_count: profile.media_count,
         profile_picture_url: profile.profile_picture_url,
       } : null,
-      insights: {
-        period,
-        ...insights,
-      },
+      insights: { period, ...insights },
       fetched_at: new Date().toISOString(),
     });
   } catch (err) {
