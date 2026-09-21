@@ -38,8 +38,10 @@ const FREQ_LABEL: Record<string, string> = { '2/week': '2 / semaine', '3/week': 
 
 export default function SemainePage() {
   const router = useRouter();
+  const [userId, setUserId] = useState<string | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
   const [showPublish, setShowPublish] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [brain, setBrain] = useState<any>(null);
@@ -48,6 +50,7 @@ export default function SemainePage() {
     const load = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { router.push('/login'); return; }
+      setUserId(session.user.id);
 
       const [{ data: weeks }, { data: b }] = await Promise.all([
         supabase.from('weeks').select('id').eq('user_id', session.user.id).order('created_at', { ascending: false }).limit(1),
@@ -96,10 +99,36 @@ export default function SemainePage() {
           </div>
           <h2 className="font-cinzel text-lg font-semibold text-text">Pas encore de posts</h2>
           <p className="text-sm text-sub text-center max-w-[280px]">
-            Ta bibliothèque est la matière première de ta semaine. Ajoute tes visuels, on s&apos;occupe du reste.
+            On va préparer ta semaine. Tu pourras ajouter tes visuels ensuite.
           </p>
-          <button onClick={() => router.push('/contenus')} className="btn-primary max-w-[240px]">
-            Aller à mes contenus
+          <button
+            onClick={async () => {
+              if (!userId) return;
+              setGenerating(true);
+              try {
+                const res = await fetch('/api/generate', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ visual_urls: [], user_id: userId }),
+                });
+                if (res.ok) window.location.reload();
+              } catch (err) {
+                console.error('Generate:', err);
+              } finally {
+                setGenerating(false);
+              }
+            }}
+            disabled={generating}
+            className="btn-primary max-w-[280px] flex items-center justify-center gap-2"
+          >
+            {generating ? (
+              <><Loader2 size={18} className="animate-spin" /> Préparation...</>
+            ) : (
+              'Générer ma semaine →'
+            )}
+          </button>
+          <button onClick={() => router.push('/contenus')} className="text-sm text-sub active:text-terra transition-colors">
+            Ou ajoute tes visuels d&apos;abord
           </button>
         </div>
       ) : (
