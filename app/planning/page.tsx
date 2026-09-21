@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import BottomNav from '@/components/bottom-nav';
-import { Settings, Image, Layers, Film, Clock, Loader2 } from 'lucide-react';
+import { Image, Layers, Film, Clock, Loader2, Send, Compass } from 'lucide-react';
 import type { Post } from '@/lib/supabase';
+import PublishModal from '@/components/publish-modal';
 
 const FORMAT_ICONS = {
   photo: Image,
@@ -25,52 +26,45 @@ const STATUS_LABELS = {
   rejected: 'Refusé',
 };
 
-export default function PlanningPage() {
+const ANGLE_BY_OBJECTIVE: Record<string, string> = {
+  grow: 'Gagner des abonnés',
+  engage: 'Créer de l\'engagement',
+  authority: 'Asseoir ton expertise',
+  sell: 'Vendre',
+  traffic: 'Amener du trafic',
+};
+
+const FREQ_LABEL: Record<string, string> = { '2/week': '2 / semaine', '3/week': '3 / semaine', '4/week': '4 / semaine', '5/week': '5 / semaine' };
+
+export default function SemainePage() {
   const router = useRouter();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showPublish, setShowPublish] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [brain, setBrain] = useState<any>(null);
 
   useEffect(() => {
-    const loadPosts = async () => {
+    const load = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { router.push('/login'); return; }
 
-      // Cherche la semaine en cours
-      const { data: weeks } = await supabase
-        .from('weeks')
-        .select('id')
-        .eq('user_id', session.user.id)
-        .order('created_at', { ascending: false })
-        .limit(1);
+      const [{ data: weeks }, { data: b }] = await Promise.all([
+        supabase.from('weeks').select('id').eq('user_id', session.user.id).order('created_at', { ascending: false }).limit(1),
+        supabase.from('brand_brain').select('objective, posting_frequency').eq('user_id', session.user.id).single(),
+      ]);
+      setBrain(b);
 
       if (weeks && weeks.length > 0) {
-        const { data: weekPosts } = await supabase
-          .from('posts')
-          .select('*')
-          .eq('week_id', weeks[0].id)
-          .order('created_at');
-
+        const { data: weekPosts } = await supabase.from('posts').select('*').eq('week_id', weeks[0].id).order('created_at');
         setPosts(weekPosts || []);
       }
       setLoading(false);
     };
-    loadPosts();
+    load();
   }, [router]);
 
   const allApproved = posts.length > 0 && posts.every((p) => p.status === 'approved');
-
-  const handleScheduleAll = async () => {
-    if (!allApproved) return;
-    const weekId = posts[0]?.week_id;
-    if (!weekId) return;
-
-    await supabase
-      .from('weeks')
-      .update({ status: 'scheduled' })
-      .eq('id', weekId);
-
-    router.push('/success');
-  };
 
   if (loading) {
     return (
@@ -82,33 +76,34 @@ export default function PlanningPage() {
 
   return (
     <div className="flex flex-col min-h-screen py-6 pb-24">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="font-cinzel text-xl font-semibold text-text">Planning</h1>
-        <button
-          onClick={() => router.push('/settings')}
-          className="touch-target text-sub active:text-terra transition-colors"
-        >
-          <Settings size={22} />
-        </button>
-      </div>
+      <h1 className="font-cinzel text-xl font-semibold text-text mb-4">Ma semaine</h1>
+
+      {/* Rappel de stratégie — où je suis, pourquoi ces posts */}
+      {brain && (brain.objective || brain.posting_frequency) && (
+        <div className="card mb-5 flex items-center gap-3 bg-terra-bg/40 border-terra/20">
+          <Compass size={18} className="text-terra flex-shrink-0" />
+          <p className="text-xs text-text leading-relaxed">
+            {brain.objective && <>Objectif : <span className="font-medium">{ANGLE_BY_OBJECTIVE[brain.objective] || brain.objective}</span>. </>}
+            {brain.posting_frequency && <>Rythme : <span className="font-medium">{FREQ_LABEL[brain.posting_frequency] || brain.posting_frequency}</span>.</>}
+          </p>
+        </div>
+      )}
 
       {posts.length === 0 ? (
         <div className="flex flex-col items-center justify-center flex-1 gap-4 py-12">
           <div className="w-16 h-16 rounded-full bg-terra-bg flex items-center justify-center">
             <Image size={28} className="text-terra" />
           </div>
-          <h2 className="font-cinzel text-lg font-semibold text-text">Aucun post cette semaine</h2>
-          <p className="text-sm text-sub text-center max-w-[260px]">
-            Importe tes visuels pour générer ta semaine de contenu
+          <h2 className="font-cinzel text-lg font-semibold text-text">Pas encore de posts</h2>
+          <p className="text-sm text-sub text-center max-w-[280px]">
+            Ta bibliothèque est la matière première de ta semaine. Ajoute tes visuels, on s&apos;occupe du reste.
           </p>
-          <button onClick={() => router.push('/import')} className="btn-primary max-w-[200px]">
-            Importer mes visuels
+          <button onClick={() => router.push('/contenus')} className="btn-primary max-w-[240px]">
+            Aller à mes contenus
           </button>
         </div>
       ) : (
         <>
-          {/* Liste des posts */}
           <div className="space-y-3 mb-6">
             {posts.map((post) => {
               const FormatIcon = FORMAT_ICONS[post.format] || Image;
@@ -118,7 +113,6 @@ export default function PlanningPage() {
                   onClick={() => router.push(`/planning/${post.id}`)}
                   className="card w-full text-left flex gap-3 active:scale-[0.98] transition-transform"
                 >
-                  {/* Miniature */}
                   <div className="w-16 h-16 rounded-input bg-border-l flex-shrink-0 overflow-hidden flex items-center justify-center">
                     {post.visual_url ? (
                       <img src={post.visual_url} alt="" className="w-full h-full object-cover" />
@@ -126,8 +120,6 @@ export default function PlanningPage() {
                       <FormatIcon size={20} className="text-muted" />
                     )}
                   </div>
-
-                  {/* Infos */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-2">
@@ -145,9 +137,7 @@ export default function PlanningPage() {
                       <FormatIcon size={12} className="text-muted" />
                       <span className="text-[10px] text-muted capitalize">{post.format}</span>
                       {post.performance_score > 0 && (
-                        <span className="text-[10px] text-terra font-medium ml-auto">
-                          Score {post.performance_score}/100
-                        </span>
+                        <span className="text-[10px] text-terra font-medium ml-auto">Score {post.performance_score}/100</span>
                       )}
                     </div>
                   </div>
@@ -156,21 +146,21 @@ export default function PlanningPage() {
             })}
           </div>
 
-          {/* CTA */}
-          <div className="mt-auto">
+          <div className="mt-auto space-y-2">
             <button
-              onClick={handleScheduleAll}
+              onClick={() => setShowPublish(true)}
               disabled={!allApproved}
-              className="btn-primary"
+              className="btn-primary flex items-center justify-center gap-2"
             >
-              {allApproved ? 'Programmer tout →' : `${posts.filter((p) => p.status === 'approved').length}/${posts.length} validés`}
+              <Send size={16} />
+              {allApproved ? 'Programmer ma semaine' : `${posts.filter((p) => p.status === 'approved').length}/${posts.length} validés`}
             </button>
             {!allApproved && (
-              <p className="text-xs text-sub text-center mt-2">
-                Valide tous les posts pour pouvoir programmer
-              </p>
+              <p className="text-xs text-sub text-center">Valide tous les posts pour pouvoir programmer</p>
             )}
           </div>
+
+          {showPublish && <PublishModal posts={posts} onClose={() => setShowPublish(false)} />}
         </>
       )}
 

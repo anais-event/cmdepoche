@@ -8,7 +8,7 @@ import {
   Eye, Heart, UserPlus, MousePointer, Loader2,
   Instagram, RefreshCw,
   MessageCircle, Bookmark, Share2, Image, Film, Copy,
-  LinkIcon,
+  LinkIcon, Sparkles, ThumbsUp, ThumbsDown,
 } from 'lucide-react';
 
 type IGProfile = {
@@ -75,6 +75,8 @@ export default function DashboardPage() {
   const [insights, setInsights] = useState<IGInsights | null>(null);
   const [media, setMedia] = useState<IGMediaItem[]>([]);
   const [period, setPeriod] = useState<'day' | 'week' | 'days_28'>('days_28');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [brain, setBrain] = useState<any>(null);
 
   const fetchData = useCallback(async (uid: string, selectedPeriod: 'day' | 'week' | 'days_28') => {
     const [profileRes, insightsRes, mediaRes] = await Promise.all([
@@ -107,6 +109,13 @@ export default function DashboardPage() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { router.push('/login'); return; }
       setUserId(session.user.id);
+
+      const { data: b } = await supabase
+        .from('brand_brain')
+        .select('what_works, what_fails')
+        .eq('user_id', session.user.id)
+        .single();
+      setBrain(b);
 
       // Check if connected first
       const { data: p } = await supabase
@@ -162,7 +171,10 @@ export default function DashboardPage() {
   if (!connected) {
     return (
       <div className="flex flex-col min-h-screen py-6 pb-24">
-        <h1 className="font-cinzel text-xl font-semibold text-text mb-6">Tableau de bord</h1>
+        <h1 className="font-cinzel text-xl font-semibold text-text mb-2">Résultats</h1>
+        <p className="text-sm text-sub mb-6">Ce que tu as fait, ce qui marche, ce que j&apos;en apprends.</p>
+
+        <LearnedCard brain={brain} />
 
         <div className="card text-center py-12">
           <div className="w-16 h-16 rounded-full bg-terra-bg mx-auto mb-4 flex items-center justify-center">
@@ -192,7 +204,7 @@ export default function DashboardPage() {
     <div className="flex flex-col min-h-screen py-6 pb-24">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="font-cinzel text-xl font-semibold text-text">Tableau de bord</h1>
+        <h1 className="font-cinzel text-xl font-semibold text-text">Résultats</h1>
         <button
           onClick={handleRefresh}
           disabled={refreshing}
@@ -201,6 +213,8 @@ export default function DashboardPage() {
           <RefreshCw size={18} className={refreshing ? 'animate-spin' : ''} />
         </button>
       </div>
+
+      <LearnedCard brain={brain} />
 
       {/* Profile Card */}
       {profile && (
@@ -456,6 +470,61 @@ export default function DashboardPage() {
       )}
 
       <BottomNav />
+    </div>
+  );
+}
+
+// « Ce que j'ai appris » (R8) — restitution de l'apprentissage.
+// Lit brand_brain.what_works / what_fails, réécrit après chaque analyse.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function LearnedCard({ brain }: { brain: any }) {
+  const works: string[] = [
+    ...(brain?.what_works?.formats || []),
+    ...(brain?.what_works?.topics || []),
+    ...(brain?.what_works?.hooks || []),
+  ].filter(Boolean);
+  const fails: string[] = [
+    ...(brain?.what_fails?.formats || []),
+    ...(brain?.what_fails?.topics || []),
+  ].filter(Boolean);
+
+  return (
+    <div className="card mb-6">
+      <div className="flex items-center gap-2 mb-3">
+        <Sparkles size={16} className="text-terra" />
+        <h2 className="font-cinzel text-base font-semibold text-text">Ce que j&apos;ai appris</h2>
+      </div>
+      {works.length === 0 && fails.length === 0 ? (
+        <p className="text-sm text-sub leading-relaxed">
+          Pas encore assez de recul. Dès que tes premiers contenus tournent, je te dirai ici ce qui marche
+          pour toi, ce qui marche moins, et ce que j&apos;en déduis pour la suite.
+        </p>
+      ) : (
+        <div className="space-y-3">
+          {works.length > 0 && (
+            <div>
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <ThumbsUp size={13} className="text-sage" />
+                <span className="text-xs font-semibold text-sage uppercase">Ce qui marche</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {works.map((w, i) => <span key={i} className="pill text-xs">{w}</span>)}
+              </div>
+            </div>
+          )}
+          {fails.length > 0 && (
+            <div>
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <ThumbsDown size={13} className="text-red-400" />
+                <span className="text-xs font-semibold text-red-400 uppercase">Ce qui marche moins</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {fails.map((w, i) => <span key={i} className="pill text-xs">{w}</span>)}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
