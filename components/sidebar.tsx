@@ -2,21 +2,23 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Home, CalendarDays, BarChart3, Settings } from 'lucide-react';
+import { CalendarDays, Image as Images, BarChart3, Settings } from 'lucide-react';
 
 const HIDDEN_ON = ['/login', '/landing', '/onboarding'];
 
+// Navigation cible (R11) : 3 onglets principaux.
 const NAV_ITEMS = [
-  { href: '/import', label: 'Accueil', icon: Home },
-  { href: '/planning', label: 'Planning', icon: CalendarDays },
-  { href: '/dashboard', label: 'Dashboard', icon: BarChart3 },
-  { href: '/settings', label: 'Réglages', icon: Settings },
+  { href: '/planning', label: 'Semaine', icon: CalendarDays },
+  { href: '/contenus', label: 'Contenus', icon: Images },
+  { href: '/resultats', label: 'Résultats', icon: BarChart3 },
 ] as const;
 
 export default function Sidebar() {
   const pathname = usePathname();
 
   if (HIDDEN_ON.some(p => pathname.startsWith(p))) return null;
+
+  const settingsActive = pathname.startsWith('/settings');
 
   return (
     <aside className="hidden md:flex flex-col w-56 fixed left-0 top-0 h-screen bg-card border-r border-border py-8 px-4 z-50">
@@ -47,8 +49,18 @@ export default function Sidebar() {
         })}
       </nav>
 
-      <div className="mt-auto px-2">
-        <p className="text-[10px] text-muted">CM de Poche v0.1</p>
+      {/* Réglages — accès secondaire */}
+      <div className="mt-auto flex flex-col gap-3 px-1">
+        <Link
+          href="/settings"
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+            settingsActive ? 'bg-terra-bg text-terra' : 'text-sub hover:bg-border-l hover:text-text'
+          }`}
+        >
+          <Settings size={20} strokeWidth={settingsActive ? 2.2 : 1.8} />
+          <span>Réglages</span>
+        </Link>
+        <p className="text-[10px] text-muted px-2">CM de Poche v0.1</p>
       </div>
     </aside>
   );
