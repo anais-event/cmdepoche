@@ -24,18 +24,17 @@ Génère un JSON strict :
 {
   "posts": [
     {
-      "day_of_week": "Lundi",
-      "scheduled_time": "18:30",
-      "format": "photo",
+      "day": "Lundi",
+      "time": "18:30",
+      "format": "Photo",
       "caption": "...",
       "hashtags": ["tag1", "tag2", "tag3", "tag4", "tag5"],
-      "performance_score": 75-95,
-      "score_details": {"pertinence": 80, "engagement": 85, "timing": 90, "hashtags": 75}
+      "score": 85
     }
   ]
 }
 
-Les formats possibles : "photo", "carousel", "reel".
+Les formats possibles : "Photo", "Carousel", "Reel".
 Varie les formats. Utilise les créneaux optimaux du créateur si disponibles.
 Réponds UNIQUEMENT avec le JSON valide.`;
 
@@ -85,24 +84,25 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabase();
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
+    const [{ data: profile }, { data: brainData }] = await Promise.all([
+      supabase.from('profiles').select('*').eq('id', userId).single(),
+      supabase.from('brand_brain').select('objective, posting_frequency, content_pillars').eq('user_id', userId).single(),
+    ]);
 
-    if (!profile) {
-      return NextResponse.json({ error: 'Profil non trouvé' }, { status: 404 });
-    }
+    const p = profile || {
+      detected_tone: 'Authentique',
+      detected_niche: 'Lifestyle',
+      detected_target: 'Audience générale',
+      followers_count: 2800,
+      optimal_slots: [
+        { day: 'Lundi', time: '18:30' },
+        { day: 'Mercredi', time: '12:00' },
+        { day: 'Vendredi', time: '19:00' },
+      ],
+    };
 
-    const { data: brainData } = await supabase
-      .from('brand_brain')
-      .select('objective, posting_frequency, content_pillars')
-      .eq('user_id', userId)
-      .single();
-
-    const objective = brainData?.objective || profile.objective || 'engage';
-    const frequency = brainData?.posting_frequency || profile.posting_frequency || '3/week';
+    const objective = brainData?.objective || (profile as Record<string, unknown>)?.objective || 'engage';
+    const frequency = brainData?.posting_frequency || (profile as Record<string, unknown>)?.posting_frequency || '3/week';
     const nPosts = parseInt(frequency) || 3;
 
     const visualUrls: string[] = body.visual_urls || [];
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify({
           model: 'claude-haiku-4-5-20251001',
           max_tokens: 2048,
-          messages: [{ role: 'user', content: CAPTION_PROMPT({ ...profile, objective }, Math.max(visualUrls.length, nPosts)) }],
+          messages: [{ role: 'user', content: CAPTION_PROMPT({ ...p, objective }, Math.max(visualUrls.length, nPosts)) }],
         }),
       });
 
@@ -127,8 +127,7 @@ export async function POST(request: NextRequest) {
         const text = data.content?.[0]?.text || '';
         try {
           const result = JSON.parse(text);
-          await createWeekAndPosts(supabase, userId, result.posts, visualUrls);
-          return NextResponse.json(result);
+          return NextResponse.json({ posts: result.posts, db_ok: false });
         } catch {
           console.error('Erreur parsing réponse Claude:', text);
         }
@@ -136,7 +135,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Fallback déterministe
-    const slots = (profile.optimal_slots as { day: string; time: string }[]) || [
+    const slots = (p.optimal_slots as { day: string; time: string }[]) || [
       { day: 'Lundi', time: '18:30' },
       { day: 'Mercredi', time: '12:00' },
       { day: 'Vendredi', time: '19:00' },
@@ -144,8 +143,8 @@ export async function POST(request: NextRequest) {
       { day: 'Dimanche', time: '17:00' },
     ];
 
-    const formats: ('photo' | 'carousel' | 'reel')[] = ['carousel', 'photo', 'reel', 'carousel', 'photo'];
-    const niche = profile.detected_niche || 'Lifestyle';
+    const formats = ['Carousel', 'Photo', 'Reel', 'Carousel', 'Photo'];
+    const niche = (p.detected_niche as string) || 'Lifestyle';
     const pillars = brainData?.content_pillars as { name: string }[] | null;
 
     const captions = [
@@ -157,8 +156,8 @@ export async function POST(request: NextRequest) {
     ];
 
     const posts = slots.slice(0, nPosts).map((slot, i) => ({
-      day_of_week: slot.day,
-      scheduled_time: slot.time,
+      day: slot.day,
+      time: slot.time,
       format: formats[i % formats.length],
       caption: captions[i % captions.length],
       hashtags: [
@@ -167,57 +166,12 @@ export async function POST(request: NextRequest) {
         'contentcreator',
         'createurfrancais',
       ],
-      performance_score: 82 + i * 3,
-      score_details: { pertinence: 80 + i, engagement: 85, timing: 88 - i, hashtags: 78 + i * 2 },
+      score: 82 + i * 3,
     }));
 
-    await createWeekAndPosts(supabase, userId, posts, visualUrls);
-    return NextResponse.json({ posts });
+    return NextResponse.json({ posts, db_ok: false });
   } catch (err) {
     console.error('Erreur génération:', err);
     return NextResponse.json({ error: 'Erreur lors de la génération' }, { status: 500 });
   }
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function createWeekAndPosts(supabase: any, userId: string, posts: any[], visualUrls: string[]) {
-  const weekStart = getNextMonday();
-  const { data: week, error: weekError } = await supabase
-    .from('weeks')
-    .insert({ user_id: userId, week_start: weekStart, status: 'draft' })
-    .select()
-    .single();
-
-  if (weekError) {
-    console.error('Week insert error:', weekError);
-    return;
-  }
-
-  if (week) {
-    const postsToInsert = posts.map((p: Record<string, unknown>, i: number) => ({
-      week_id: week.id,
-      user_id: userId,
-      day_of_week: p.day_of_week,
-      scheduled_time: p.scheduled_time,
-      format: p.format,
-      caption: p.caption,
-      hashtags: p.hashtags,
-      visual_url: visualUrls[i] || null,
-      performance_score: p.performance_score || 80,
-      score_details: p.score_details || null,
-      status: 'pending',
-    }));
-
-    const { error: postsError } = await supabase.from('posts').insert(postsToInsert);
-    if (postsError) console.error('Posts insert error:', postsError);
-  }
-}
-
-function getNextMonday(): string {
-  const now = new Date();
-  const day = now.getDay();
-  const diff = day === 0 ? 1 : 8 - day;
-  const monday = new Date(now);
-  monday.setDate(now.getDate() + diff);
-  return monday.toISOString().split('T')[0];
 }
