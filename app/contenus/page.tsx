@@ -104,8 +104,31 @@ export default function ContenusPage() {
     return i.status === tab;
   });
 
+  const [generating, setGenerating] = useState(false);
   const selectedCount = items.filter(i => i.status === 'selected').length;
   const totalCount = items.length;
+
+  const handleGenerateWeek = async () => {
+    if (!userId || generating) return;
+    setGenerating(true);
+    try {
+      const selectedUrls = items
+        .filter(i => i.status === 'selected')
+        .map(i => i.url);
+
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ visual_urls: selectedUrls, user_id: userId }),
+      });
+
+      if (!res.ok) throw new Error('Erreur génération');
+      router.push('/planning');
+    } catch (err) {
+      console.error('Generate:', err);
+      setGenerating(false);
+    }
+  };
 
   return (
     <div className="flex flex-col min-h-screen py-6 pb-24">
@@ -182,8 +205,16 @@ export default function ContenusPage() {
 
           {selectedCount > 0 && (
             <div className="mt-auto">
-              <button onClick={() => router.push('/planning')} className="btn-primary">
-                Préparer la semaine ({selectedCount}) →
+              <button
+                onClick={handleGenerateWeek}
+                disabled={generating}
+                className="btn-primary flex items-center justify-center gap-2"
+              >
+                {generating ? (
+                  <><Loader2 size={18} className="animate-spin" /> Préparation...</>
+                ) : (
+                  `Préparer la semaine (${selectedCount}) →`
+                )}
               </button>
             </div>
           )}
