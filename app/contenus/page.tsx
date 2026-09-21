@@ -17,6 +17,22 @@ type LibraryItem = {
 
 type Tab = 'all' | 'selected' | 'scheduled' | 'published';
 
+async function clientInsertPosts(userId: string, posts: Record<string, unknown>[]) {
+  const postsToInsert = posts.map((p) => ({
+    user_id: userId,
+    day: p.day,
+    time: p.time,
+    format: p.format || 'Photo',
+    caption: p.caption || '',
+    hashtags: p.hashtags || [],
+    score: p.score || 85,
+    state: 'pending',
+  }));
+
+  const { error } = await supabase.from('weekly_posts').insert(postsToInsert);
+  if (error) console.error('Insert weekly_posts error:', error);
+}
+
 export default function ContenusPage() {
   const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
@@ -123,6 +139,10 @@ export default function ContenusPage() {
       });
 
       if (!res.ok) throw new Error('Erreur génération');
+      const data = await res.json();
+      if (!data.db_ok && data.posts) {
+        await clientInsertPosts(userId, data.posts);
+      }
       router.push('/planning');
     } catch (err) {
       console.error('Generate:', err);

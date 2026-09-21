@@ -43,7 +43,7 @@ export default function PublishModal({
     setPublishing(true);
     setResults([]);
 
-    const approvedPosts = posts.filter((p) => p.status === 'approved');
+    const approvedPosts = posts.filter((p) => p.state === 'approved');
 
     for (let i = 0; i < approvedPosts.length; i++) {
       setCurrentIndex(i);
@@ -56,8 +56,8 @@ export default function PublishModal({
         };
 
         if (scheduleMode === 'scheduled') {
-          const dayIndex = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'].indexOf(post.day_of_week);
-          if (dayIndex >= 0 && post.scheduled_time) {
+          const dayIndex = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'].indexOf(post.day);
+          if (dayIndex >= 0 && post.time) {
             const now = new Date();
             const currentDay = now.getDay() === 0 ? 6 : now.getDay() - 1;
             let daysUntil = dayIndex - currentDay;
@@ -65,7 +65,7 @@ export default function PublishModal({
 
             const schedDate = new Date(now);
             schedDate.setDate(schedDate.getDate() + daysUntil);
-            const [hours, minutes] = post.scheduled_time.split(':');
+            const [hours, minutes] = post.time.split(':');
             schedDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
 
             body.scheduledDate = schedDate.toISOString();
@@ -100,7 +100,7 @@ export default function PublishModal({
     setPublishing(false);
   };
 
-  const approvedCount = posts.filter((p) => p.status === 'approved').length;
+  const approvedCount = posts.filter((p) => p.state === 'approved').length;
   const successCount = results.filter((r) => r.status === 'success').length;
   const isDone = results.length > 0 && !publishing;
 
@@ -140,7 +140,7 @@ export default function PublishModal({
                     )}
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm text-text">{post?.day_of_week} — {post?.scheduled_time}</p>
+                    <p className="text-sm text-text">{post?.day} — {post?.time}</p>
                     {r.message && <p className="text-xs text-red-400">{r.message}</p>}
                   </div>
                 </div>

@@ -68,30 +68,21 @@ export type ExpertAdvice = {
   }[];
 };
 
-export type Week = {
-  id: string;
-  user_id: string;
-  week_start: string;
-  status: 'draft' | 'scheduled' | 'published';
-  created_at: string;
-};
-
 export type Post = {
   id: string;
-  week_id: string;
   user_id: string;
-  day_of_week: string;
-  scheduled_time: string;
-  format: 'photo' | 'carousel' | 'reel';
-  caption: string;
+  day: string;
+  time: string;
+  caption: string | null;
   hashtags: string[];
-  visual_url: string | null;
-  sound_id: string | null;
-  performance_score: number;
-  score_details: Record<string, number> | null;
-  status: 'pending' | 'approved' | 'rejected';
-  instagram_post_id: string | null;
+  format: string;
+  score: number;
+  state: 'pending' | 'approved' | 'rejected';
+  photo_id: string | null;
+  watermark: boolean;
+  credits_used: number;
   created_at: string;
+  updated_at: string;
 };
 
 export type Sound = {
