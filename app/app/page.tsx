@@ -15,6 +15,16 @@ const imgR = (seed: string, w = 400, h = 500) => `https://picsum.photos/seed/${s
 
 const feedImgs = ['forest', 'beach', 'cafe', 'mountain', 'sunset', 'portrait', 'city', 'flowers', 'lake'];
 
+const fmtCount = (n: any) => {
+  if (n == null || isNaN(Number(n))) return null;
+  const v = Number(n);
+  if (v >= 1_000_000) return (v / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
+  if (v >= 1000) return (v / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+  return String(v);
+};
+const dayAbbr: any = { Lundi: 'Lun', Mardi: 'Mar', Mercredi: 'Mer', Jeudi: 'Jeu', Vendredi: 'Ven', Samedi: 'Sam', Dimanche: 'Dim' };
+const fmtSlot = (s: any) => `${dayAbbr[s.day] || s.day} ${String(s.time).replace(':', 'h')}`;
+
 const CREDIT_COST: any = { Photo: 1, Carrousel: 2, Reel: 3 };
 const FORMAT_NEEDS: any = {
   Photo: { type: 'photo', label: '1 photo', minPhotos: 1, minVideos: 0 },
@@ -220,6 +230,7 @@ function App() {
   const [trendScan, setTrendScan] = useState(false);
   const [trendDone, setTrendDone] = useState(false);
   const [trendStep, setTrendStep] = useState(0);
+  const [scanData, setScanData] = useState<any>(null);
 
   const [formDA, setFormDA] = useState<any>({ prenom: '', nom: '', niches: [], particularite: '', objectifs: [], ages: [], gender: '', profil: '', pageType: '', tonMarque: '', autresReseaux: '', siteWeb: '' });
   const updateDA = (k: string, v: any) => setFormDA((prev: any) => ({ ...prev, [k]: v }));
@@ -258,8 +269,43 @@ function App() {
   const canReel = videoCount >= 1;
 
   const startAnalysis = () => {
-    setAzing(true); setAStep(0); let s = 0;
-    const iv = setInterval(() => { s++; setAStep(s); if (s >= 5) { clearInterval(iv); setTimeout(() => { setAzing(false); setADone(true); }, 500); } }, 800);
+    setAzing(true); setAStep(0);
+
+    // Lance le scan réel en parallèle de l'animation
+    const scanReq = (async () => {
+      try {
+        let res: Response;
+        if (screenshot && !handle) {
+          const blob = await (await fetch(screenshot)).blob();
+          const fd = new FormData();
+          fd.append('screenshot', blob, 'profile.jpg');
+          res = await fetch('/api/scan/screenshot', { method: 'POST', body: fd });
+        } else {
+          res = await fetch('/api/scan/handle', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ handle: handle.replace('@', '').trim() }),
+          });
+        }
+        if (!res.ok) throw new Error('scan_failed');
+        const data = await res.json();
+        setScanData(data);
+        return true;
+      } catch {
+        setScanData(null);
+        return false;
+      }
+    })();
+
+    let s = 0;
+    const iv = setInterval(() => {
+      s++; setAStep(s);
+      if (s >= 5) {
+        clearInterval(iv);
+        // N'affiche le résultat qu'une fois le scan terminé
+        scanReq.finally(() => setTimeout(() => { setAzing(false); setADone(true); }, 400));
+      }
+    }, 800);
   };
 
   const startTrendScan = () => {
@@ -400,11 +446,14 @@ function App() {
   // ─── 1. ACCUEIL + ANALYSE ─────
   if (scr === SCR.ANALYSIS) {
     const steps = ['Scan de @' + (handle || 'ton_compte') + '…', 'Détection de ta palette visuelle…', 'Analyse de ton ton éditorial…', 'Calcul de tes créneaux optimaux…', "Génération de l'aperçu…"];
-    const pal = ['#B87356', '#D4A088', '#8FA37A', '#B5C5A5', '#E8DDD0'];
+    const d = scanData || {};
+    const pal = (Array.isArray(d.color_palette) && d.color_palette.length) ? d.color_palette : ['#B87356', '#D4A088', '#8FA37A', '#B5C5A5', '#E8DDD0'];
     const detected = [
-      { label: 'Abonnés', value: '3.2K' }, { label: "Taux d'engagement", value: '5.8%' },
-      { label: 'Fréquence actuelle', value: '2.1 posts/sem' }, { label: 'Ton détecté', value: 'Inspirant, personnel' },
-      { label: 'Niche', value: 'Voyage & Nature' },
+      { label: 'Abonnés', value: fmtCount(d.followers_count) || '3.2K' },
+      { label: "Taux d'engagement", value: d.engagement_rate != null ? d.engagement_rate + '%' : '5.8%' },
+      { label: 'Fréquence actuelle', value: '2.1 posts/sem' },
+      { label: 'Ton détecté', value: d.detected_tone || 'Inspirant, personnel' },
+      { label: 'Niche', value: d.detected_niche || 'Voyage & Nature' },
     ];
     return (
       <div style={appS}><div style={{ ...fs, padding: '56px 24px 24px' }}>
@@ -471,13 +520,17 @@ function App() {
           </Card>
           <Card style={{ marginBottom: 14 }} animate>
             <div style={lblS}>Palette visuelle</div>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>{pal.map((c, i) => (<div key={i} style={{ flex: 1, height: 42, borderRadius: 12, background: c }} />))}</div>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>{pal.map((c: string, i: number) => (<div key={i} style={{ flex: 1, height: 42, borderRadius: 12, background: c }} />))}</div>
             <p style={{ fontSize: 12, color: T.sub, margin: 0 }}>Tons chauds, terreux, accents verts.</p>
           </Card>
           <Card style={{ marginBottom: 14 }} animate>
             <div style={lblS}>Formats qui marchent</div>
             <div style={{ display: 'flex', gap: 12, marginBottom: 14 }}>
-              {[{ f: 'Carrousel', p: '42%', c: TERRA }, { f: 'Photo', p: '35%', c: SAGE }, { f: 'Reel', p: '23%', c: '#D4A088' }].map((x) => (
+              {(() => { const fe = d.format_engagement_estimate; return [
+                { f: 'Carrousel', p: (fe?.carousel != null ? fe.carousel : 42) + '%', c: TERRA },
+                { f: 'Photo', p: (fe?.photo != null ? fe.photo : 35) + '%', c: SAGE },
+                { f: 'Reel', p: (fe?.reel != null ? fe.reel : 23) + '%', c: '#D4A088' },
+              ]; })().map((x) => (
                 <div key={x.f} style={{ flex: 1, textAlign: 'center' }}>
                   <div style={{ fontSize: 22, fontWeight: 700, color: x.c }}>{x.p}</div>
                   <div style={{ fontSize: 12, color: T.sub }}>{x.f}</div>
@@ -485,7 +538,7 @@ function App() {
               ))}
             </div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              {['Lun 18h-19h', 'Mer 12h-13h', 'Ven 19h-20h', 'Dim 10h-11h'].map((t) => (
+              {(Array.isArray(d.optimal_slots) && d.optimal_slots.length ? d.optimal_slots.map(fmtSlot) : ['Lun 18h-19h', 'Mer 12h-13h', 'Ven 19h-20h', 'Dim 10h-11h']).map((t: string) => (
                 <span key={t} style={{ background: T.terraBg, color: TERRA, padding: '5px 12px', borderRadius: 100, fontSize: 12, fontWeight: 500 }}>{t}</span>
               ))}
             </div>
