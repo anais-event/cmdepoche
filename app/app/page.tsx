@@ -313,7 +313,9 @@ function App() {
     const iv = setInterval(() => { s++; setTrendStep(s); if (s >= 4) { clearInterval(iv); setTimeout(() => { setTrendScan(false); setTrendDone(true); }, 500); } }, 900);
   };
 
-  const generatePosts = () => {
+  // Construit le planning (créneaux + format + visuel) — la logique format/média
+  // reste locale car elle dépend des visuels sélectionnés dans l'artefact.
+  const buildPlan = () => {
     const photos = selMedia.filter((m: any) => m.type === 'photo');
     const videos = selMedia.filter((m: any) => m.type === 'video');
 
@@ -331,17 +333,9 @@ function App() {
     ];
     const slots = postCount === 5 ? slots5 : slots3;
 
-    const captions = [
-      { caption: 'La lumière dorée de cette fin de journée… Ces moments simples qui font tout. ✨🌅', hashtags: ['#goldenhour', '#momentpresent', '#naturelover', '#aesthetic'] },
-      { caption: 'Routine du matin — 3 habitudes qui ont tout changé. Tu fais quoi en premier ? ☀️', hashtags: ['#morningroutine', '#habitudes', '#motivation', '#lifestyle'] },
-      { caption: "Entre ciel et terre, on respire. Qui d'autre a besoin de sa dose de nature ? 🌿", hashtags: ['#nature', '#escapade', '#breathe', '#outdoors'] },
-      { caption: 'Le weekend commence ici. Pas de filtre, juste la vraie vie. 🌊', hashtags: ['#weekendvibes', '#nofilter', '#ocean', '#reallife'] },
-      { caption: 'Les petits détails qui rendent le quotidien beau. On en parle pas assez. 🌸', hashtags: ['#slowlife', '#details', '#gratitude', '#authentique'] },
-    ];
-
     let usedVideos = 0;
     let usedPhotos = 0;
-    const result = slots.map((slot, i) => {
+    return slots.map((slot, i) => {
       let format, mediaItem;
       if (usedVideos < videos.length && (i === 0 || i === slots.length - 1 || (postCount === 5 && i === 3))) {
         format = 'Reel';
@@ -356,61 +350,96 @@ function App() {
         mediaItem = photos[usedPhotos % Math.max(photos.length, 1)];
         usedPhotos++;
       }
+      return { ...slot, format, media: mediaItem, credits: CREDIT_COST[format] };
+    });
+  };
 
-      const cap = captions[i % captions.length];
-      const score = 85 + Math.floor(Math.random() * 13);
+  // Assemble le planning local + le contenu réel (accroche + légende + hashtags)
+  // généré par l'IA à partir des données du scan et de la DA.
+  const assemblePosts = (plan: any[], aiPosts: any[]) => {
+    const norm = (h: string) => (h.startsWith('#') ? h : '#' + h.replace(/^#+/, ''));
+    return plan.map((slot, i) => {
+      const ai = aiPosts[i] || {};
+      const sd = ai.scoreDetails || {};
       return {
-        ...slot, format, media: mediaItem,
-        caption: cap.caption, hashtags: cap.hashtags,
-        score, scoreDetails: {
-          horaire: 80 + Math.floor(Math.random() * 18),
-          legende: 82 + Math.floor(Math.random() * 16),
-          hashtags: 80 + Math.floor(Math.random() * 18),
-          visuel: 85 + Math.floor(Math.random() * 13),
+        ...slot,
+        caption: ai.caption || '',
+        hook: ai.hook || '',
+        hashtags: Array.isArray(ai.hashtags) ? ai.hashtags.map(norm) : [],
+        score: ai.score || 85 + Math.floor(Math.random() * 13),
+        scoreDetails: {
+          horaire: sd.horaire ?? 80 + Math.floor(Math.random() * 18),
+          legende: sd.legende ?? 82 + Math.floor(Math.random() * 16),
+          hashtags: sd.hashtags ?? 80 + Math.floor(Math.random() * 18),
+          visuel: sd.visuel ?? 85 + Math.floor(Math.random() * 13),
         },
-        credits: CREDIT_COST[format],
       };
     });
+  };
 
-    setPosts(result);
-    setPStates(new Array(result.length).fill(null));
+  const genProfile = () => {
+    const d = scanData || {};
+    const objLabel = objectifOptions.filter((o) => formDA.objectifs.includes(o.id)).map((o) => o.label).join(', ');
+    const nicheLabel = formDA.niches.map((id: string) => nicheOptions.find((n) => n.id === id)?.label).filter(Boolean).join(', ');
+    const targetParts = [formDA.ages.join('/'), formDA.gender, formDA.profil].filter(Boolean).join(' · ');
+    return {
+      handle: handle.replace('@', '').trim() || d.handle,
+      prenom: formDA.prenom,
+      niche: nicheLabel || d.detected_niche,
+      particularite: formDA.particularite,
+      tone: formDA.tonMarque || d.detected_tone,
+      target: targetParts || d.detected_target,
+      objective: objLabel,
+      pageType: pageTypeOptions.find((pt) => pt.id === formDA.pageType)?.label,
+      bio: d.bio,
+      followers_count: d.followers_count ?? null,
+    };
   };
 
   const startGen = () => {
-    setGen(true); setGenP(0); let p = 0;
-    const iv = setInterval(() => { p += Math.random() * 15 + 8; if (p >= 100) { p = 100; clearInterval(iv); setTimeout(() => { setGen(false); generatePosts(); go(SCR.PLANNING); }, 400); } setGenP(Math.min(p, 100)); }, 350);
+    setGen(true); setGenP(0);
+    const plan = buildPlan();
+
+    const genReq = (async () => {
+      try {
+        const planPayload = plan.map((p: any) => ({
+          day: p.day, time: p.time, format: p.format,
+          visual: p.media ? { label: p.media.label, type: p.media.type } : null,
+        }));
+        const res = await fetch('/api/generate/week', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ profile: genProfile(), plan: planPayload }),
+        });
+        if (!res.ok) throw new Error('gen_failed');
+        const data = await res.json();
+        return assemblePosts(plan, data.posts || []);
+      } catch {
+        return assemblePosts(plan, []);
+      }
+    })();
+
+    let p = 0;
+    const iv = setInterval(() => {
+      p += Math.random() * 15 + 8;
+      if (p >= 100) {
+        p = 100; clearInterval(iv);
+        genReq.then((result) => {
+          setPosts(result);
+          setPStates(new Array(result.length).fill(null));
+          setTimeout(() => { setGen(false); go(SCR.PLANNING); }, 400);
+        });
+      }
+      setGenP(Math.min(p, 100));
+    }, 350);
   };
 
-  const altCaptions = [
-    "Ce moment où tout s'aligne. Respire, tu es exactement où il faut. 🌟",
-    "Un pas après l'autre, chaque jour compte. Quelle est ta prochaine étape ? 🚀",
-    'Moins de bruit, plus de sens. Voilà ma philosophie contenu. 💡',
-    "Ce n'est pas la perfection qui engage, c'est l'authenticité. 🌿",
-    'Ta communauté ne grandit pas par hasard. Elle grandit par intention. 🎯',
-  ];
-  const altHashtags = [
-    ['#motivation', '#mindset', '#growthmindset', '#dailyinspo'],
-    ['#progression', '#objectifs', '#hustle', '#success'],
-    ['#contenu', '#strategie', '#slowlife', '#intentional'],
-    ['#authenticite', '#reallife', '#behindthescenes', '#creator'],
-    ['#communaute', '#engagement', '#socialmedia', '#creator'],
-  ];
-
-  const regenPost = (idx: number, changes: any[]) => {
+  const regenPost = async (idx: number, changes: any[]) => {
     const old = posts[idx];
     const newPost = { ...old };
     if (changes.includes('photo')) {
       const available = selMedia.filter((m: any) => m.id !== old.media?.id);
       if (available.length) newPost.media = available[Math.floor(Math.random() * available.length)];
-    }
-    if (changes.includes('legende')) {
-      const ci = Math.floor(Math.random() * altCaptions.length);
-      newPost.caption = altCaptions[ci];
-      newPost.hashtags = altHashtags[ci];
-    }
-    if (changes.includes('cta')) {
-      const ctas = ['Et toi, tu en penses quoi ? 💬', 'Enregistre ce post pour plus tard 🔖', "Tag quelqu'un qui a besoin de voir ça 👇", 'Dis-moi en commentaire ⬇️', 'Partage si ça te parle 🔁'];
-      newPost.caption = newPost.caption.replace(/[?!]?\s*[✨🌅☀️🌿🌊🌸🌟🚀💡🎯💬🔖👇⬇️🔁]*$/, '') + ' ' + ctas[Math.floor(Math.random() * ctas.length)];
     }
     if (changes.includes('format')) {
       const mType = newPost.media?.type || 'photo';
@@ -418,6 +447,32 @@ function App() {
       else if (mType === 'photo' && newPost.format === 'Photo' && photoCount >= 3) { newPost.format = 'Carrousel'; newPost.credits = 2; }
       else if (mType === 'photo' && newPost.format === 'Carrousel') { newPost.format = 'Photo'; newPost.credits = 1; }
     }
+
+    // Régénération du texte par la vraie IA (légende et/ou CTA)
+    const wantsText = changes.includes('legende') || changes.includes('cta');
+    if (wantsText) {
+      const norm = (h: string) => (h.startsWith('#') ? h : '#' + h.replace(/^#+/, ''));
+      try {
+        const res = await fetch('/api/generate/week', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            profile: genProfile(),
+            plan: [{ day: newPost.day, time: newPost.time, format: newPost.format, visual: newPost.media ? { label: newPost.media.label, type: newPost.media.type } : null }],
+          }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const ai = (data.posts || [])[0];
+          if (ai) {
+            newPost.caption = ai.caption || newPost.caption;
+            newPost.hook = ai.hook || newPost.hook;
+            if (Array.isArray(ai.hashtags) && ai.hashtags.length) newPost.hashtags = ai.hashtags.map(norm);
+          }
+        }
+      } catch { /* garde la légende actuelle si l'IA échoue */ }
+    }
+
     newPost.score = 85 + Math.floor(Math.random() * 13);
     newPost.scoreDetails = { horaire: 80 + Math.floor(Math.random() * 18), legende: 82 + Math.floor(Math.random() * 16), hashtags: 80 + Math.floor(Math.random() * 18), visuel: 85 + Math.floor(Math.random() * 13) };
     const n = [...posts]; n[idx] = newPost; setPosts(n);
